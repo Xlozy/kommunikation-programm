@@ -219,6 +219,9 @@ tr.dzeile>td{background:var(--hover);border-bottom:1px solid var(--line2);paddin
 .ffr{display:grid;grid-template-columns:140px minmax(0,1fr) 70px 20px;gap:8px;align-items:center;font-size:13px}
 .ffr input.ed{font-size:13px}
 .ph{color:var(--accent)}
+.phd summary{cursor:pointer;font-size:12px;color:var(--muted);width:max-content}
+.phd summary:hover{color:var(--text)}
+.phd[open] summary{margin-bottom:4px}
 .zul{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px;width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;cursor:pointer}
 .zul:hover{background:var(--hover)}
 
@@ -274,7 +277,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   </label>
   <button class="icon" id="syncdot" data-act="sync-dot" aria-label="Sync"><span class="dot off"></span></button>
   <button class="icon" data-act="einst" aria-label="Einstellungen">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09A1.7 1.7 0 009 19.37a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.63 15a1.7 1.7 0 00-1.56-1.04H3a2 2 0 110-4h.09A1.7 1.7 0 004.63 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.63a1.7 1.7 0 001.04-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.37 9a1.7 1.7 0 001.56 1.04H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1.04z"/></svg>
   </button>
 </header>
 <div class="app">
@@ -699,8 +702,8 @@ function kmEditor(k,m){
     </div>
     ${ff}
     <div style="display:flex;flex-direction:column;gap:6px"><label class="k" for="${id("vt")}">Vorlage · Text</label><textarea id="${id("vt")}" class="text" data-bind="${b}vorlage.text" rows="4">${esc(tpl.text)}</textarea>
-      <span class="k">Platzhalter aus der Projekt-Kartei: {Titel} {Untertitel} {Datum} {Zeit} {Ort} {Mitwirkende} {Kurzbeschreibung} {Lange Beschreibung} {Kurzbios} {Absender} {Absender-E-Mail} {Datum kurz} {Treffpunkt}, jedes Feld aus «Weitere Angaben» wie {Kosten} {Anmeldung}${m.form==="formular"?" · in Formularfeldern zusätzlich {Vorlage}":""}</span></div>
-    <div>${sicher("km|"+m.id,"Massnahme löschen")}</div>
+      <details class="phd"><summary>Platzhalter</summary><span class="k">Aus der Projekt-Kartei: {Titel} {Untertitel} {Datum} {Zeit} {Ort} {Mitwirkende} {Kurzbeschreibung} {Lange Beschreibung} {Kurzbios} {Absender} {Absender-E-Mail} {Datum kurz} {Treffpunkt}, jedes Feld aus «Weitere Angaben» wie {Kosten} {Anmeldung}${m.form==="formular"?" · in Formularfeldern zusätzlich {Vorlage}":""}</span></details></div>
+    <div style="display:flex;justify-content:flex-end">${sicher("km|"+m.id,"Massnahme löschen")}</div>
   </div>`;
 }
 
@@ -737,6 +740,7 @@ function renderEinst(){
   <div><p class="sek" style="padding-bottom:8px">GitHub-Sync</p>${syncTeil}
     <p id="sync-st" class="k${syncState==="error"?" fehler":""}" role="status" style="margin:8px 0 0">${esc(ui.sfMeldung||syncZeile())}</p></div>
   <div><p class="sek" style="padding-bottom:8px">Daten aus v1 übernehmen</p>${migTeil()}</div>
+  ${aufrTeil()}
   ${restTeil()}
   <div><p class="sek" style="padding-bottom:8px">Daten</p><p class="k" style="margin:0 0 10px">Lokaler Bestand: ${istTestdaten()?"Testdaten":DB.herkunft==="v1-migration"?"aus v1 übernommen":"eigene Daten"}${syncCfg?", wird synchronisiert":", nur in diesem Browser"}.</p>
   <span class="links"><button class="lnk" data-act="export">Als JSON sichern</button><button class="lnk" data-act="import">JSON laden …</button>${syncCfg?"":sicher("reset","Testdaten neu laden","Alle Daten ersetzen?")}</span></div></div>`;
@@ -764,7 +768,8 @@ function migTeil(){
     ${det("Projekte ohne gültigen Träger (nicht übernommen)",R.ohneTraeger,esc)}
     ${det("Versände ohne passende Aufgabe",R.versaendeOhne,x=>`${esc(x.datum)} · ${esc(x.kanal)} · ${esc(x.titel)}`)}
     ${R.vorlagenOhne.length+R.kontakteOhne.length+R.generisch.length+R.platzhalter.length+R.kanaeleLeer.length+R.typUnbekannt.length+R.ohneTraeger.length+R.versaendeOhne.length?"":'<p class="k" style="margin:0">nichts</p>'}
-    <p class="k" style="margin:10px 0 0">Weggelassen: ${R.nichtRelevant} Aufgaben «nicht relevant», ${R.aufgabenOhne} Aufgaben ohne Kanal/Projekt${R.doppelt?`, ${R.doppelt} doppelte zusammengelegt`:""}. In v1 archiviert: ${R.archiviertP} Projekte, ${R.archiviertK} Kanäle (übernommen). Über Empfänger früherer Aufgaben einem Kanal zugeordnet: ${R.viaEmpfaenger} Kontakte.${R.statusNotizen?` ${R.statusNotizen} Status-Notizen aus v1 sind gespeichert, aber nicht sichtbar.`:""}</p>
+    ${R.umbenannt.length?`<details class="mdet"><summary>Umbenannt nach Kanal-Typ (${R.umbenannt.length})</summary><ul>${R.umbenannt.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`:""}
+    <p class="k" style="margin:10px 0 0">${R.fachgruppen?`${R.fachgruppenIn?"Bestehender":"Neuer"} Kanal «Fachgruppen»: ${R.fachgruppen} Kontakte. `:""}${R.traegerWeg.length?`Leere Träger weggelassen: ${esc(R.traegerWeg.join(", "))}. `:""}Weggelassen: ${R.nichtRelevant} Aufgaben «nicht relevant», ${R.vergangenWeg} offene Aufgaben vergangener Projekte, ${R.aufgabenOhne} Aufgaben ohne Kanal/Projekt${R.doppelt?`, ${R.doppelt} doppelte zusammengelegt`:""}. In v1 archiviert: ${R.archiviertP} Projekte, ${R.archiviertK} Kanäle (übernommen). Über Empfänger früherer Aufgaben einem Kanal zugeordnet: ${R.viaEmpfaenger} Kontakte.${R.statusNotizen?` ${R.statusNotizen} Status-Notizen aus v1 sind gespeichert, aber nicht sichtbar.`:""}</p>
     <p class="k" style="margin:10px 0 0;color:var(--text2)">«Übernehmen» ersetzt den lokalen Bestand (${istTestdaten()?"Testdaten":"eigene Daten – vorher sichern"}). Nicht Zugeordnetes bleibt unten unter «Aus v1 nicht zugeordnet» abrufbar.</p>
     <span class="links" style="margin-top:8px">${istTestdaten()?"":'<button class="lnk" data-act="export">Bestand sichern (JSON)</button>'}<button class="lnk stark" data-act="mig-ok">Übernehmen</button><button class="lnk m" data-act="mig-weg">Verwerfen</button></span>`;
 }
@@ -901,6 +906,59 @@ async function syncVerbinden(){
 }
 function syncTrennen(){syncCfg=null;syncCfgSpeichern();clearInterval(syncPoll);syncPoll=null;syncLast=null;syncStatus("off");ui.sfMeldung="Getrennt. Die Daten bleiben lokal erhalten.";renderEinst()}
 
+/* ================= v1-Stufen aufräumen (Entscheid Leowie 18.10.2026, P-013) =================
+   «anstehend»/«am Horizont» entfallen, wo der Kanal genau eine andere Massnahme hat (= «spätestens bis»);
+   Status und Presets werden auf diese umgehängt. «spätestens bis» wird nach Kanal-Typ benannt. */
+const FRUEH=/^(anstehend|am horizont|horizont)$/i,SPAET=/^spätestens( bis)?$/i;
+const TYPNAME2={"Agenda & Newsletter":"Eingabe","Persönliche Einladung":"Einladung","Soziale Netzwerke":"Post","Vor Ort":"Aushang","Website":"Eintrag","Medien":"Medienmitteilung"};
+function aufrPlan(){
+  const P=[];
+  for(const k of live("kanaele")){
+    const ms=k.massnahmen||[],frueh=ms.filter(m=>FRUEH.test(m.name)),rest=ms.filter(m=>!FRUEH.test(m.name));
+    let weg=[],ziel=null;
+    if(ms.length>=2&&frueh.length){
+      if(rest.length===1){weg=frueh;ziel=rest[0]}
+      else{P.push({k,typ:"selbst",text:rest.length?`${k.name}: ${frueh.length}× «${frueh[0].name}» neben ${rest.length} anderen Massnahmen`:`${k.name}: ${ms.length}× «${frueh[0].name}», keine «spätestens bis»`});}
+    }
+    const neu=TYPNAME2[k.typ],bleibt=ms.filter(m=>!weg.includes(m));
+    const um=bleibt.filter(m=>SPAET.test(m.name)&&neu&&!bleibt.some(x=>x!==m&&norm(x.name)===norm(neu)));
+    if(weg.length||um.length){
+      const n=live("status").filter(s=>s.kanal_id===k.id&&weg.some(m=>m.id===s.massnahme_id)).length;
+      P.push({k,typ:"aendern",weg,ziel,um:um.length===1?um:[],neu,
+        text:[...weg.map(m=>`«${m.name}» (${m.vorlauf_tage??"läuft"} T) entfernen`),...(um.length===1?[`«${um[0].name}» → «${neu}»`]:[])].join(" · ")+(n?` · ${n} Projekt-Einträge umgehängt`:"")});
+    }
+  }
+  return P;
+}
+function aufrAusfuehren(){
+  const P=aufrPlan().filter(x=>x.typ==="aendern");let n=0;
+  for(const x of P){
+    const k=x.k,wegIds=x.weg.map(m=>m.id);
+    if(x.ziel){
+      for(const st of live("status").filter(s=>s.kanal_id===k.id&&wegIds.includes(s.massnahme_id))){
+        const da=live("status").find(s=>s.projekt_id===st.projekt_id&&s.kanal_id===k.id&&s.massnahme_id===x.ziel.id);
+        if(!da){st.massnahme_id=x.ziel.id;touch(st)}
+        else tomb(st); // «spätestens bis» hat Vorrang
+      }
+      for(const pr of live("presets")){const alt=pr.kanal_massnahmen,neu=[...new Set(alt.map(key=>wegIds.some(id=>key===k.id+":"+id)?k.id+":"+x.ziel.id:key))];
+        if(neu.length!==alt.length||neu.some((v,i)=>v!==alt[i])){pr.kanal_massnahmen=neu;touch(pr)}}
+      k.massnahmen=k.massnahmen.filter(m=>!wegIds.includes(m.id));
+    }
+    for(const m of x.um)m.name=x.neu;
+    touch(k);n++;
+  }
+  return n;
+}
+function aufrTeil(){
+  const P=aufrPlan();if(!P.length)return"";
+  const a=P.filter(x=>x.typ==="aendern"),s=P.filter(x=>x.typ==="selbst");
+  return `<div><p class="sek" style="padding-bottom:8px">Massnahmen aus v1 aufräumen</p>
+    <p class="k" style="margin:0 0 6px">«anstehend» und «am Horizont» entfallen, wo der Kanal eine «spätestens bis»-Massnahme hat; Projekt-Einträge und Presets wandern dorthin. «spätestens bis» wird nach Kanal-Typ benannt.</p>
+    ${a.length?`<details class="mdet" open><summary>Wird geändert (${a.length} ${a.length===1?"Kanal":"Kanäle"})</summary><ul>${a.map(x=>`<li>${esc(x.k.name)} <span class="k">– ${esc(x.text)}</span></li>`).join("")}</ul></details>`:""}
+    ${s.length?`<details class="mdet" open><summary>Selbst entscheiden (${s.length})</summary><ul>${s.map(x=>`<li>${esc(x.text)}</li>`).join("")}</ul></details>`:""}
+    ${a.length?`<span class="links" style="margin-top:8px"><button class="lnk" data-act="export">Bestand sichern (JSON)</button><button class="lnk stark" data-act="aufr-ok">Aufräumen</button></span>`:""}</div>`;
+}
+
 /* ================= Migration v1 → v2 (Briefing-Neubau «Daten und Sync», P-009) =================
    Reine Funktion: v1-Objekt → {db, R}. Was nicht eindeutig zuordenbar ist, landet in R (Liste statt raten). */
 const V1_PH={titel:"Titel",untertitel:"Untertitel",datum_lang:"Datum",datum_kurz:"Datum kurz",uhrzeit:"Zeit",ort:"Ort",treffpunkt:"Treffpunkt",dauer:"Dauer",
@@ -922,10 +980,12 @@ function migrateV1(d){
   if(!d||d.schemaVersion!==1||!Array.isArray(d.veranstaltungen))throw new Error("Keine v1-Daten (erwartet: data.json mit schemaVersion 1).");
   const L=k=>(d[k]||[]).filter(r=>r&&!r.deleted),now=nowISO();
   const R={vorlagenOhne:[],kontakteOhne:[],generisch:[],kanaeleLeer:[],versaendeOhne:[],platzhalter:[],typUnbekannt:[],ohneTraeger:[],
-    aufgabenOhne:0,nichtRelevant:0,doppelt:0,viaEmpfaenger:0,archiviertK:0,archiviertP:0,statusNotizen:0};
+    aufgabenOhne:0,nichtRelevant:0,vergangenWeg:0,umbenannt:[],traegerWeg:[],fachgruppen:0,doppelt:0,viaEmpfaenger:0,archiviertK:0,archiviertP:0,statusNotizen:0};
   /* Träger ← projekte (alt) */
   const tmap=new Map(),tids=new Set();
-  const traeger=L("projekte").map(p=>{let id=norm(p.slug||p.name).replace(/[^a-z0-9]+/g,"")||"t"+p.id;while(tids.has(id))id+="2";tids.add(id);tmap.set(p.id,id);
+  const belegtT=new Set([...L("veranstaltungen").map(v=>v.projekt_id),...L("presets").map(p=>p.projekt_id),...L("kanaele").flatMap(k=>k.projekt_ids||[])]);
+  /* Entscheid 18.10.: leere Test-Träger weglassen (leer und «test» im Namen oder Slug) */
+  const traeger=L("projekte").filter(p=>belegtT.has(p.id)||!/test/i.test((p.name||"")+" "+(p.slug||""))||(R.traegerWeg.push(p.name||p.slug||"ohne Namen"),false)).map(p=>{let id=norm(p.slug||p.name).replace(/[^a-z0-9]+/g,"")||"t"+p.id;while(tids.has(id))id+="2";tids.add(id);tmap.set(p.id,id);
     const nm=p.name||"";return{id,name:nm,kuerzel:nm.length<=6?nm:(p.slug||nm).toUpperCase(),absender_name:p.absender_name||"",absender_email:p.absender_email||"",modified:now}});
   /* Kanäle ← kanaele; Massnahmen ← aufgaben_stufen (+ Stufennamen, die nur in Aufgaben vorkommen) */
   const kontakte=new Map(L("kontakte").map(c=>[c.id,c])),verwendet=new Set(),kmap=new Map(),aufg=L("aufgaben");
@@ -999,6 +1059,7 @@ function migrateV1(d){
     if(!e||!m||!vids.has(pid)){R.aufgabenOhne++;continue}
     const vs=(versByA.get(a.id)||[]).sort((x,y)=>(y.versandt_am||"").localeCompare(x.versandt_am||"")),vx=vs[0];vs.forEach(x=>versUsed.add(x.id));
     const erl=a.status==="erledigt";
+    if(!erl){const pr=projekte.find(x=>x.id===pid),e2=(pr.termine.map(t=>t.datum).filter(Boolean).sort().pop())||"";if(e2&&e2<today()){R.vergangenWeg++;continue}}
     const st={id:"s"+a.id,projekt_id:pid,kanal_id:e.v2.id,massnahme_id:m.id,status:erl?"erledigt":"offen",
       erledigt_am:erl?(v1Iso(vx&&vx.versandt_am)||v1Iso(a.modified)||today()):null,manuell:!erl,modified:now};
     if(a.status_notiz){st.notiz_v1=a.status_notiz;R.statusNotizen++}
@@ -1008,6 +1069,23 @@ function migrateV1(d){
     const key=pid+"|"+e.v2.id+":"+m.id,alt=stMap.get(key);
     if(alt){R.doppelt++;if(alt.status!=="erledigt"&&erl){st.versand=st.versand||alt.versand;stMap.set(key,st)}else if(!alt.versand&&st.versand)alt.versand=st.versand;continue}
     stMap.set(key,st);
+  }
+  /* Entscheid 18.10.: generische Namen bei Kanälen mit genau einer Massnahme nach Kanal-Typ benennen */
+  const TYPNAME={"Agenda & Newsletter":"Eingabe","Persönliche Einladung":"Einladung","Soziale Netzwerke":"Post","Vor Ort":"Aushang","Website":"Eintrag","Medien":"Medienmitteilung"};
+  for(const k of kanaele)if(k.massnahmen.length===1&&GENERISCH.test(k.massnahmen[0].name)&&TYPNAME[k.typ]){R.umbenannt.push(`${k.name}: ${k.massnahmen[0].name} → ${TYPNAME[k.typ]}`);k.massnahmen[0].name=TYPNAME[k.typ]}
+  R.generisch=R.generisch.filter(x=>{const[kn,mn]=x.split(" · ");const k=kanaele.find(k=>k.name===kn);return !k||k.massnahmen.some(m=>m.name===mn)});
+  /* Entscheid 18.10.: Kontakte der Kategorie «Fachgruppe» ohne Kanal → neuer Kanal «Fachgruppen» */
+  const fg=[...kontakte.values()].filter(c=>!verwendet.has(c.id)&&c.kategorie==="Fachgruppe");
+  if(fg.length){
+    const vl=kanaele.filter(k=>k.typ==="Persönliche Einladung").flatMap(k=>k.massnahmen.map(m=>m.vorlauf_tage)).filter(x=>x!=null).sort((a,b)=>a-b);
+    const tr=[...new Set(fg.flatMap(c=>(c.projekt_ids||[]).map(x=>tmap.get(x)).filter(Boolean)))];
+    const da=kanaele.filter(k=>norm(k.name)==="fachgruppen");
+    if(da.length===1){da[0].kontakte=da[0].kontakte.concat(fg.map(v1Kontakt).filter(x=>!x.email||!da[0].kontakte.some(y=>norm(y.email)===norm(x.email))));R.fachgruppenIn="bestehenden"}
+    else kanaele.push({id:"k-fachgruppen",traeger_ids:tr.length?tr:traeger.slice(0,1).map(t=>t.id),name:"Fachgruppen",typ:"Persönliche Einladung",link:"",
+      kontakte:fg.map(v1Kontakt),notiz:"Bei der Migration aus den v1-Kontakten der Kategorie «Fachgruppe» angelegt.",felder:[],
+      massnahmen:[{id:"m1",name:"Einladung",vorlauf_tage:vl.length?vl[Math.floor(vl.length/2)]:21,form:"email",vorlage:{name:"",betreff:"",text:""},formular_felder:[]}],modified:now});
+    fg.forEach(c=>verwendet.add(c.id));R.fachgruppen=fg.length;
+    R.kontakteOhne=R.kontakteOhne.filter(x=>x.kategorie!=="Fachgruppe");
   }
   for(const x of vers)if(!versUsed.has(x.id))R.versaendeOhne.push({titel:x.veranstaltung_titel||"",kanal:x.kanal_name||"",datum:v1Iso(x.versandt_am),betreff:x.betreff||"",text:x.body||""});
   const status=[...stMap.values()];
@@ -1174,6 +1252,7 @@ const ACT={
   "einst-zu"(){$("#einst").close()},
   export(){const b=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`kommunikation-v2-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)},
   import(){$("#importfile").click()},
+  "aufr-ok"(){const n=aufrAusfuehren();ui.kmAuf=null;render();renderEinst();toast(`${n} ${n===1?"Kanal":"Kanäle"} aufgeräumt`)},
   "sync-dot"(){if(syncCfg)syncNow();else ACT.einst()},
   "sync-verbinden"(){syncVerbinden()},
   "sync-ok"(){ui.syncSchritt="ok";syncVerbinden()},
