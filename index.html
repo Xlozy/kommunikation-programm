@@ -222,6 +222,10 @@ tr.dzeile>td{background:var(--hover);border-bottom:1px solid var(--line2);paddin
 .tplv{display:flex;flex-direction:column;gap:4px;border:1px dashed var(--line2);border-radius:8px;padding:8px 12px}
 .tplb{margin:0;font-size:13px;color:var(--text2)}
 .tplt{margin:0;font-size:13px;color:var(--text2);white-space:pre-wrap;max-height:220px;overflow:auto}
+.warnb{color:var(--warn)!important}
+.vwl{display:flex;flex-direction:column;gap:4px}
+.vwz{display:flex;align-items:center;gap:12px}
+.vwz .lnk{font-size:12px}
 .pz.vz{grid-template-columns:28px minmax(0,220px) minmax(0,1fr) minmax(0,180px)}
 .pz.vz>.k:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tbes{display:flex;flex-direction:column;gap:4px;margin-top:10px}
@@ -385,7 +389,7 @@ function presetKeys(p){const s=new Set();for(const id of p.presets||[]){const pr
    Angefasst = von Hand hinzugefügt, Status ≠ offen oder gespeicherte Bearbeitung (versand, checkliste, postings). */
 function angefasst(st){
   if(!st)return false;
-  if(st.manuell||st.status!=="offen"||st.postings)return true;
+  if(st.manuell||st.status!=="offen"||st.postings||st.vorlage_wahl)return true;
   if(st.versand&&Object.values(st.versand).some(v=>v!=null))return true;
   return !!(st.checkliste&&Object.keys(st.checkliste).length);
 }
@@ -404,8 +408,14 @@ const emails=k=>(k.kontakte||[]).map(c=>c.email).filter(Boolean);
 
 const PH_HILFE=`Aus der Projekt-Kartei: {Titel} {Untertitel} {Datum} {Datum kurz} {Zeit} {Ort} {Treffpunkt} {Mitwirkende} {Kurzbeschreibung} {Lange Beschreibung} {Kurzbios} · jedes Feld aus «Weitere Angaben», z. B. {Form} {Dauer} {Kosten} {Wetter} {Anmeldung} · vom Träger: {Träger} {Träger-Beschreibung} {Absender} {Absender-E-Mail}. Eine Zeile, deren Platzhalter alle leer sind, fällt weg. Unbekannte Platzhalter wie {Name} bleiben als Lücke stehen.`;
 /* Vorlage einer Kanal-Massnahme: geteilte Vorlage (D-027) oder eigener Text */
-function tplOf(m){const v=m.vorlage_id&&get("vorlagen",m.vorlage_id);return v?{name:v.name||"",betreff:v.betreff||"",text:v.text||"",geteilt:v}:Object.assign({name:"",betreff:"",text:""},m.vorlage,{geteilt:null})}
-const tplName=m=>{const t=tplOf(m);return t.geteilt?(t.name||"ohne Namen"):(t.text||t.betreff?"eigener Text":"")};
+/* Mehrere Vorlagen pro Kanal-Massnahme (P-018); gewählt wird im Projekt, Standard = erste */
+const vIds=m=>(m.vorlage_ids||(m.vorlage_id?[m.vorlage_id]:[])).filter(id=>get("vorlagen",id));
+function setVIds(m,ids){m.vorlage_ids=ids;delete m.vorlage_id}
+function tplOf(m,st){
+  const ids=vIds(m),id=st&&st.vorlage_wahl&&ids.includes(st.vorlage_wahl)?st.vorlage_wahl:ids[0],v=id&&get("vorlagen",id);
+  return v?{name:v.name||"",betreff:v.betreff||"",text:v.text||"",geteilt:v}:Object.assign({name:"",betreff:"",text:""},m.vorlage,{geteilt:null});
+}
+const tplName=m=>{const ids=vIds(m);if(ids.length)return ids.map(id=>get("vorlagen",id).name||"ohne Namen").join(" · ");const t=m.vorlage||{};return t.text||t.betreff?"eigener Text":""};
 /* Platzhalter aus der Projekt-Kartei */
 function werte(p){
   const t=p.termine||[],z=p.zeiten||[],o=p.orte||[],mw=(p.mitwirkende||[]).filter(x=>x.name);
@@ -429,11 +439,11 @@ function fill(s,p,extra){
 }
 function biosText(p){return(p.mitwirkende||[]).filter(x=>x.name&&x.bio).map(x=>`${x.name} – ${x.bio}`).join("\n\n")}
 function versand(p,r){
-  const v=(r.st&&r.st.versand)||{},tpl=tplOf(r.m);
+  const v=(r.st&&r.st.versand)||{},tpl=tplOf(r.m,r.st);
   return{betreff:v.betreff!=null?v.betreff:fill(tpl.betreff,p),text:v.text!=null?v.text:fill(tpl.text,p),
     anhaenge:v.anhaenge!=null?v.anhaenge:(p.material||[]).slice(0,1).map(x=>x.name).filter(Boolean)};
 }
-function formFelder(p,r){const vt=fill(tplOf(r.m).text,p);return(r.m.formular_felder||[]).map(f=>({label:f.label,limit:f.limit,wert:fill(f.wert,p,{Vorlage:vt})}))}
+function formFelder(p,r){const vt=fill(tplOf(r.m,r.st).text,p);return(r.m.formular_felder||[]).map(f=>({label:f.label,limit:f.limit,wert:fill(f.wert,p,{Vorlage:vt})}))}
 function kernText(p,f){
   const L={termine:x=>x.datum?fmtLang(x.datum)+(x.zusatz?` (${x.zusatz})`:""):"",zeiten:x=>x.wert?x.wert+(x.zusatz?` (${x.zusatz})`:""):"",
     orte:x=>x.wert?x.wert+(x.zusatz?` (${x.zusatz})`:""):"",mitwirkende:x=>x.name?x.name+(x.rolle?` (${x.rolle})`:""):""};
@@ -511,12 +521,13 @@ function renderSide(){
 
 /* ---- Hauptbereich ---- */
 function renderMain(){
-  const m=$("#main");
+  const m=$("#main"),sTop=m.scrollTop,wTop=window.scrollY;
   if(ui.bereich==="projekte"){const p=get("projekte",ui.projekt);m.innerHTML=p?karteiP(p):leer("Kein Projekt ausgewählt.")}
   else if(ui.kanalAnsicht==="kanaele"){const k=get("kanaele",ui.kanal);m.innerHTML=k?karteiK(k):leer("Kein Kanal ausgewählt.")}
   else if(ui.kanalAnsicht==="vorlagen"){const v=get("vorlagen",ui.vorlage);m.innerHTML=v?karteiV(v):leer("Keine Vorlage ausgewählt.")}
   else{const p=get("presets",ui.preset);m.innerHTML=p?karteiPr(p):leer("Kein Preset ausgewählt.")}
-  grow();
+  m.style.minHeight=m.scrollHeight+"px";grow();m.style.minHeight=""; // grow() lässt Textfelder kurz schrumpfen – sonst springt die Ansicht hoch
+  m.scrollTop=sTop;if(window.scrollY!==wTop)window.scrollTo(0,wTop);
 }
 const leer=t=>`<div class="kartei"><p class="sek">Kartei</p><p style="color:var(--muted);margin:60px auto 0">${t}</p></div>`;
 const cp=(spec,label)=>`<button class="copy" data-act="copy" data-arg="${esc(spec)}" aria-label="${esc(label)} kopieren">${COPYICON}</button>`;
@@ -656,6 +667,12 @@ function rowHTML(p,r){
     <td class="st ${done?"done":s==="laeuft"?"laeuft":ov?"over":""}">${esc(stxt)}</td></tr>
     ${auf?`<tr class="dzeile"><td></td><td colspan="5">${detailHTML(p,r)}</td></tr>`:""}`;
 }
+function vorlageWahl(r){
+  const ids=vIds(r.m);if(ids.length<2)return esc(tplName(r.m)||"keine");
+  const akt=tplOf(r.m,r.st).geteilt.id,bearb=r.st&&r.st.versand&&(r.st.versand.text!=null||r.st.versand.betreff!=null);
+  return ids.map(id=>{const v=get("vorlagen",id),arg=r.key+"|"+id,warn=ui.sicher==="vw|"+arg;
+    return `<button class="sbtn ${warn?"warnb":""}" data-act="vwahl" data-arg="${esc(arg)}" aria-pressed="${id===akt}">${warn?"bearbeiteten Text ersetzen?":esc(v.name||"ohne Namen")}</button>`}).join(" · ");
+}
 function detailHTML(p,r){
   const s=sOf(r),key=r.key,b=`st:${key}:`;
   /* A4: nur noch die Statuszeile; «erledigt» darin speichert den Versand (inkl. Toast) */
@@ -667,7 +684,7 @@ function detailHTML(p,r){
     const v=versand(p,r),em=emails(r.k);
     const an=r.st&&r.st.status==="erledigt"&&r.st.versand&&r.st.versand.an?r.st.versand.an:em.length>1?`${r.k.name} · ${em.length} Adressen, als BCC`:em.length===1?`${(r.k.kontakte.find(c=>c.email)||{}).name||""} <${em[0]}>`:"";
     L=`<div class="ga"><span class="k">An</span><span>${an?esc(an):`<span class="k">Keine E-Mail-Adresse beim Kanal.</span> <button class="lnk" data-act="goto-kanal" data-arg="${esc(r.k.id)}">Kontakt ergänzen ›</button>`}</span>
-      <span class="k">Vorlage</span><span>${esc(tplName(r.m)||"keine")}</span>
+      <span class="k">Vorlage</span><span>${vorlageWahl(r)}</span>
       <label class="k" for="vb-${esc(key)}">Betreff</label><input id="vb-${esc(key)}" class="ed" data-bind="${esc(b)}versand.betreff" value="${esc(v.betreff)}"></div>
       <label class="sr" for="vt-${esc(key)}">Text</label><textarea id="vt-${esc(key)}" class="text" data-bind="${esc(b)}versand.text" rows="6">${esc(v.text)}</textarea>`;
     R=`<div><span class="k">Anhänge</span>${mat.length?mat.map(m=>`<label class="chk ${v.anhaenge.includes(m.name)?"":"aus"}"><input type="checkbox" data-chg="anhang" data-arg="${esc(key+"|"+m.name)}" ${v.anhaenge.includes(m.name)?"checked":""}> ${esc(m.name)}</label>`).join(""):'<span class="k">kein Material</span>'}</div>
@@ -736,8 +753,13 @@ function kmEditor(k,m){
     <div class="ffr k" aria-hidden="true"><span>Feld</span><span>Inhalt (Platzhalter)</span><span>max. Zeichen</span><span></span></div>
     ${(m.formular_felder||[]).map((f,i)=>`<div class="ffr"><input class="ed" data-bind="${b}formular_felder.${i}.label" value="${esc(f.label)}" placeholder="Feld" aria-label="Formularfeld ${i+1}"><input class="ed" data-bind="${b}formular_felder.${i}.wert" value="${esc(f.wert)}" placeholder="{Titel}" aria-label="Inhalt von Formularfeld ${i+1}"><input class="ed" type="number" min="0" data-bind="${b}formular_felder.${i}.limit" value="${f.limit??""}" aria-label="Zeichenlimit von Formularfeld ${i+1}"><button class="rm" data-act="ff-rm" data-arg="${esc(m.id+"|"+i)}" aria-label="Formularfeld ${i+1} entfernen">×</button></div>`).join("")}
     <button class="mehr" data-act="ff-add" data-arg="${esc(m.id)}">+ Feld</button></div>`:"";
-  const tpl=tplOf(m),vs=live("vorlagen").filter(v=>(k.traeger_ids||[]).includes(v.traeger_id)).sort((a,b)=>a.name.localeCompare(b.name,"de"));
-  const tplTeil=tpl.geteilt
+  const tpl=tplOf(m),ids=vIds(m),vs=live("vorlagen").filter(v=>(k.traeger_ids||[]).includes(v.traeger_id)).sort((a,b)=>a.name.localeCompare(b.name,"de"));
+  const wahl=`<div class="kmg" style="align-items:start"><span class="k" style="padding-top:2px">Vorlagen</span><div class="vwl">${vs.map(v=>`<span class="vwz"><label class="chk ${ids.includes(v.id)?"":"aus"}"><input type="checkbox" data-chg="km-vorlage" data-arg="${esc(m.id+"|"+v.id)}" ${ids.includes(v.id)?"checked":""}> ${esc(v.name||"ohne Namen")}</label>${ids[0]===v.id&&ids.length>1?'<span class="k">Standard</span>':""}<button class="lnk m" data-act="goto-vorlage" data-arg="${esc(v.id)}" aria-label="Vorlage ${esc(v.name)} bearbeiten">bearbeiten ›</button></span>`).join("")||'<span class="k">Für diesen Träger gibt es noch keine Vorlagen (Kanäle → Vorlagen).</span>'}
+    <span class="k">${ids.length>1?"Im Projekt wählst du pro Versand; Standard ist die zuerst angehakte.":ids.length?"":"Keine angehakt – die Massnahme nimmt ihren eigenen Text."}</span></div></div>`;
+  const tplTeil=ids.length?"":`${m.form==="email"?`<div class="kmg"><label class="k" for="${id("vb")}">Betreff</label><input id="${id("vb")}" class="ed" data-bind="${b}vorlage.betreff" value="${esc(tpl.betreff)}"></div>`:""}
+      <div style="display:flex;flex-direction:column;gap:6px"><label class="k" for="${id("vt")}">Eigener Text</label><textarea id="${id("vt")}" class="text" data-bind="${b}vorlage.text" rows="4">${esc(tpl.text)}</textarea>
+      <details class="phd"><summary>Platzhalter</summary><span class="k">${esc(PH_HILFE)}${m.form==="formular"?" In Formularfeldern zusätzlich {Vorlage}.":""}</span></details></div>`;
+  const _alt=tpl.geteilt
     ?`<div class="tplv"><div class="thead"><span class="k">Text der Vorlage «${esc(tpl.name)}»</span><button class="lnk" data-act="goto-vorlage" data-arg="${esc(tpl.geteilt.id)}">Vorlage bearbeiten ›</button></div>${m.form==="email"&&tpl.betreff?`<p class="tplb">Betreff: ${esc(tpl.betreff)}</p>`:""}<p class="tplt">${esc(tpl.text)||'<span class="k">leer</span>'}</p></div>`
     :`${m.form==="email"?`<div class="kmg"><label class="k" for="${id("vb")}">Betreff</label><input id="${id("vb")}" class="ed" data-bind="${b}vorlage.betreff" value="${esc(tpl.betreff)}"></div>`:""}
       <div style="display:flex;flex-direction:column;gap:6px"><label class="k" for="${id("vt")}">Eigener Text</label><textarea id="${id("vt")}" class="text" data-bind="${b}vorlage.text" rows="4">${esc(tpl.text)}</textarea>
@@ -747,8 +769,8 @@ function kmEditor(k,m){
       <label class="k" for="${id("n")}">Name</label><input id="${id("n")}" class="ed" data-bind="${b}name" data-rerender value="${esc(m.name)}">
       <label class="k" for="${id("v")}">Vorlauf</label><span><input id="${id("v")}" type="number" min="0" data-bind="${b}vorlauf_tage" data-rerender value="${m.vorlauf_tage??""}"> <span class="k">Tage vor Auftakt · leer = läuft bis zum Termin</span></span>
       <label class="k" for="${id("f")}">Form</label><select id="${id("f")}" data-bind="${b}form" data-rerender>${Object.entries(FORMEN).map(([v,l])=>`<option value="${v}" ${m.form===v?"selected":""}>${l}</option>`).join("")}</select>
-      <label class="k" for="${id("vs")}">Vorlage</label><select id="${id("vs")}" data-chg="km-vorlage" data-arg="${esc(m.id)}"><option value="">eigener Text</option>${vs.map(v=>`<option value="${esc(v.id)}" ${tpl.geteilt&&tpl.geteilt.id===v.id?"selected":""}>${esc(v.name||"ohne Namen")}</option>`).join("")}</select>
     </div>
+    ${wahl}
     ${ff}
     ${tplTeil}
     <div style="display:flex;justify-content:flex-end">${sicher("km|"+m.id,"Massnahme löschen")}</div>
@@ -756,12 +778,12 @@ function kmEditor(k,m){
 }
 
 /* ---- Vorlagen-Kartei (D-027): Text oben, darunter die Kanal-Massnahmen des Trägers mit Haken ---- */
-function vorlageNutzer(vid){return live("kanaele").flatMap(k=>(k.massnahmen||[]).filter(m=>m.vorlage_id===vid).map(m=>k.id+":"+m.id))}
+function vorlageNutzer(vid){return live("kanaele").flatMap(k=>(k.massnahmen||[]).filter(m=>vIds(m).includes(vid)).map(m=>k.id+":"+m.id))}
 function karteiV(v){
   const kms=kmsFor(v.traeger_id),nur=ui.vorlageFilter==="an";
-  const gr=TYPEN.map(t=>{const z=kms.filter(x=>x.k.typ===t&&(!nur||x.m.vorlage_id===v.id));if(!z.length)return"";
-    return `<h3 class="gruppe" style="padding:12px 6px 4px;border:0">${esc(t)}</h3>${z.map(x=>{const on=x.m.vorlage_id===v.id,jetzt=on?"":tplName(x.m);
-      return `<label class="pz vz ${on?"":"aus"}"><input type="checkbox" data-chg="vk" data-arg="${esc(x.key)}" ${on?"checked":""}><span class="kn">${esc(x.k.name)}</span><span>${esc(x.m.name)} <span class="k">${esc(FORMEN[x.m.form]||"")}</span></span><span class="k">${jetzt?"jetzt: "+esc(jetzt):""}</span></label>`}).join("")}`}).join("");
+  const gr=TYPEN.map(t=>{const z=kms.filter(x=>x.k.typ===t&&(!nur||vIds(x.m).includes(v.id)));if(!z.length)return"";
+    return `<h3 class="gruppe" style="padding:12px 6px 4px;border:0">${esc(t)}</h3>${z.map(x=>{const on=vIds(x.m).includes(v.id),andere=vIds(x.m).filter(id=>id!==v.id).map(id=>get("vorlagen",id).name),jetzt=andere.length?(on?"auch: ":"hat: ")+andere.join(" · "):(on?"":tplName(x.m));
+      return `<label class="pz vz ${on?"":"aus"}"><input type="checkbox" data-chg="vk" data-arg="${esc(x.key)}" ${on?"checked":""}><span class="kn">${esc(x.k.name)}</span><span>${esc(x.m.name)} <span class="k">${esc(FORMEN[x.m.form]||"")}</span></span><span class="k">${esc(jetzt)}</span></label>`}).join("")}`}).join("");
   const tr=get("traeger",v.traeger_id)||{};
   return `<div class="kartei">
   <div class="kopf"><p class="sek">Vorlage</p><span class="links"><button class="lnk m" data-act="dup-v">Duplizieren</button>${sicher("v","Löschen")}<button class="lnk m" data-act="close">Schliessen</button></span></div>
@@ -775,7 +797,7 @@ function karteiV(v){
     <div class="spalte" style="gap:0">
       <div style="display:flex;align-items:baseline;gap:12px"><p class="sek">Verwendet in · ${esc(tr.kuerzel||"")}</p><span style="flex:1"></span>
         <span role="group" aria-label="Anzeige" style="display:flex;gap:2px"><button class="sub" data-act="vfilter" data-arg="alle" aria-pressed="${!nur}">alle</button><button class="sub" data-act="vfilter" data-arg="an" aria-pressed="${nur}">nur angehakte</button></span></div>
-      <p class="k" style="margin:4px 0 0">Haken = diese Kanal-Massnahme nimmt diese Vorlage. Ein eigener Text der Massnahme bleibt gespeichert und kommt zurück, wenn der Haken weg ist.</p>
+      <p class="k" style="margin:4px 0 0">Haken = diese Kanal-Massnahme bietet diese Vorlage an. Eine Massnahme kann mehrere Vorlagen haben (z. B. Sie und Du); gewählt wird im Projekt. Ohne Vorlage nimmt sie ihren eigenen Text.</p>
       <div style="display:flex;flex-direction:column">${gr||'<p class="k">Keine Kanal-Massnahmen für diesen Träger.</p>'}</div>
     </div>
   </div></div>`;
@@ -1463,7 +1485,7 @@ const ACT={
     if(a==="p"){tomb(get("projekte",ui.projekt));ui.projekt=null}
     else if(a==="k"){tomb(get("kanaele",ui.kanal));ui.kanal=null}
     else if(a==="pr"){tomb(get("presets",ui.preset));ui.preset=null}
-    else if(a==="v"){const id=ui.vorlage;for(const k of live("kanaele")){let t=false;for(const m of k.massnahmen||[])if(m.vorlage_id===id){m.vorlage_id=null;t=true}if(t)touch(k)}tomb(get("vorlagen",id));ui.vorlage=null}
+    else if(a==="v"){const id=ui.vorlage;for(const k of live("kanaele")){let t=false;for(const m of k.massnahmen||[])if(vIds(m).includes(id)||m.vorlage_id===id){setVIds(m,vIds(m).filter(x=>x!==id));t=true}if(t)touch(k)}tomb(get("vorlagen",id));ui.vorlage=null}
     else if(a.startsWith("km|")){const k=get("kanaele",ui.kanal);k.massnahmen=k.massnahmen.filter(m=>m.id!==a.slice(3));touch(k);ui.kmAuf=null}
     else if(a==="reset"){DB=seed();dbVollstaendig();saveNow();ui.projekt=null;ui.kanal=null;ui.preset=null;renderEinst();render();toast("Testdaten geladen");return}
     render();
@@ -1530,6 +1552,11 @@ const ACT={
   "vs-anlegen"(tid){const da=live("vorlagen").filter(v=>v.traeger_id===tid).map(v=>norm(v.name));let n=0;
     for(const v of VORSCHLAEGE)if(!da.includes(norm(v.name))){add("vorlagen",{traeger_id:tid,name:v.name,betreff:v.betreff,text:v.text});n++}
     $("#einst").close();ui.bereich="kanaele";ui.kanalAnsicht="vorlagen";ui.traeger=tid;ui.vorlage=(live("vorlagen").find(v=>v.traeger_id===tid&&v.name===VORSCHLAEGE[0].name)||{}).id||null;render();navPush();toast(`${n} Vorlagen angelegt – jetzt Kanal-Massnahmen anhaken`)},
+  vwahl(a){const i=a.lastIndexOf("|"),key=a.slice(0,i),vid=a.slice(i+1),p=get("projekte",ui.projekt),r=rowOf(p,key);if(!r)return;
+    if(tplOf(r.m,r.st).geteilt.id===vid){ui.sicher=null;render();return}
+    const bearb=r.st&&r.st.versand&&(r.st.versand.text!=null||r.st.versand.betreff!=null);
+    if(bearb&&ui.sicher!=="vw|"+a){ui.sicher="vw|"+a;render();return}
+    ui.sicher=null;const st=ensureStatus(p,key);st.vorlage_wahl=vid;if(st.versand){delete st.versand.text;delete st.versand.betreff}touch(st);render(`[data-act="vwahl"][data-arg="${CSS.escape(a)}"]`)},
   "aufr-ok"(){const n=aufrAusfuehren();ui.kmAuf=null;render();renderEinst();toast(`${n} ${n===1?"Kanal":"Kanäle"} aufgeräumt`)},
   "sync-dot"(){if(syncCfg)syncNow();else ACT.einst()},
   "sync-verbinden"(){syncVerbinden()},
@@ -1552,8 +1579,8 @@ const CHG={
   pk(key,el){const pr=get("presets",ui.preset);pr.kanal_massnahmen=pr.kanal_massnahmen.filter(x=>x!==key);if(el.checked)pr.kanal_massnahmen.push(key);touch(pr);render()},
   "nz-erl"(id,el){const x=get("notizen",id);if(x){x.erledigt=el.checked;touch(x);renderNotizListe()}},
   "vs-tr"(a,el){ui.vsTraeger=el.value;renderEinst()},
-  vk(key,el){const km=kmByKey(key),v=get("vorlagen",ui.vorlage);if(!km||!v)return;km.m.vorlage_id=el.checked?v.id:null;touch(km.k);render()},
-  "km-vorlage"(mid,el){const k=get("kanaele",ui.kanal),m=k&&(k.massnahmen||[]).find(x=>x.id===mid);if(!m)return;m.vorlage_id=el.value||null;touch(k);render()},
+  vk(key,el){const km=kmByKey(key),v=get("vorlagen",ui.vorlage);if(!km||!v)return;const ids=vIds(km.m).filter(x=>x!==v.id);if(el.checked)ids.push(v.id);setVIds(km.m,ids);touch(km.k);render()},
+  "km-vorlage"(a,el){const[mid,vid]=a.split("|"),k=get("kanaele",ui.kanal),m=k&&(k.massnahmen||[]).find(x=>x.id===mid);if(!m)return;const ids=vIds(m).filter(x=>x!==vid);if(el.checked)ids.push(vid);setVIds(m,ids);touch(k);render()},
   kt(tid,el){const k=get("kanaele",ui.kanal);k.traeger_ids=(k.traeger_ids||[]).filter(x=>x!==tid);if(el.checked)k.traeger_ids.push(tid);touch(k);render()},
   anhang(a,el){const i=a.indexOf("|"),key=a.slice(0,i),name=a.slice(i+1),p=get("projekte",ui.projekt),r=rowOf(p,key),st=ensureStatus(p,key);let l=versand(p,r).anhaenge.filter(x=>x!==name);if(el.checked)l.push(name);st.versand=Object.assign({},st.versand,{anhaenge:l});touch(st);render()},
   check(a,el){const i=a.lastIndexOf("|"),key=a.slice(0,i),n=a.slice(i+1),st=ensureStatus(get("projekte",ui.projekt),key);st.checkliste=Object.assign({},st.checkliste,{[n]:el.checked});touch(st);render()}
@@ -1565,7 +1592,7 @@ document.addEventListener("click",e=>{
   if(ui.addMass){const o=e.target.closest(".am-o");if(o){addMassnahme(o.dataset.akey);return}
     if(!e.target.closest(".amenu")){ui.addMass=false;if(!e.target.closest("[data-act]")){render();return}}}
   const b=e.target.closest("[data-act]");
-  if(b){if(ui.sicher&&b.dataset.act!=="del")ui.sicher=null;const f=ACT[b.dataset.act];
+  if(b){if(ui.sicher&&b.dataset.act!=="del"&&b.dataset.act!=="vwahl")ui.sicher=null;const f=ACT[b.dataset.act];
     if(f){const nav=NAV_ACTS.has(b.dataset.act);if(nav)navSave();f(b.dataset.arg,b,e);if(nav)navPush()}return}
   if(ui.sicher){ui.sicher=null;render()}
   const tr=e.target.closest("tr.z");if(tr&&!e.target.closest("input,textarea,select,a,label")){ACT.auf(tr.dataset.row);return}
@@ -1745,7 +1772,7 @@ function seed(){
     S("lesekreis","mitgl:m1","erledigt","2026-08-05"),S("lesekreis","mitgl:m2","erledigt","2026-08-22")
   ];
   const vorlagen=[{id:"v-mm",traeger_id:"vspw",name:"Medienmitteilung (geteilt)",betreff:"Medienmitteilung: {Titel}",text:mm,modified:nowISO()}];
-  for(const k of kanaele)if(k.id==="bz"||k.id==="baz")k.massnahmen[0].vorlage_id="v-mm";
+  for(const k of kanaele)if(k.id==="bz"||k.id==="baz")k.massnahmen[0].vorlage_ids=["v-mm"];
   return{schemaVersion:2,erstellt:nowISO(),herkunft:"testdaten",vorlagen,notizen:[],traeger:[T("vspw","Verein für Spaziergangswissenschaft","VSPW"),T("spaz","spaz Verlag","spaz"),T("ljvw","LJVW","LJVW")],projekte,kanaele,presets,status};
 }
 
