@@ -277,7 +277,7 @@ code{font-size:.92em;color:var(--text2)}
 dialog::backdrop{background:rgba(0,0,0,.55)}
 .dlg{padding:20px 22px;display:flex;flex-direction:column;gap:16px}
 .dlg h2{margin:0;font-size:20px}
-.tg{display:grid;grid-template-columns:70px minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr);gap:6px 10px;align-items:center;font-size:14px}
+.tg{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1fr) minmax(0,.7fr) minmax(0,1.2fr);gap:6px 10px;align-items:center;font-size:14px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--on);border:1px solid var(--line3);color:var(--text);padding:7px 14px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .15s}
 #toast.an{opacity:1}
 
@@ -834,17 +834,18 @@ function renderEinst(){
       ${ui.syncSchritt==="backup"?`<p class="k" style="margin:10px 0 0;color:var(--text2)">Vor dem ersten Schreiben ins Repo: den lokalen Stand als Backup sichern?</p><span class="links" style="margin-top:6px"><button class="lnk" data-act="export">Backup sichern (JSON)</button><button class="lnk stark" data-act="sync-ok">Jetzt verbinden</button><button class="lnk m" data-act="sync-abbr">abbrechen</button></span>`
         :`<span class="links" style="margin-top:10px"><button class="lnk stark" data-act="sync-verbinden">Verbinden und synchronisieren</button></span>`}`;
   $("#einst").innerHTML=`<div class="dlg"><div style="display:flex;justify-content:space-between;align-items:center"><h2 id="einst-h">Einstellungen</h2><button class="icon" data-act="einst-zu" aria-label="Schliessen">×</button></div>
-  <div><p class="sek" style="padding-bottom:8px">Träger und Absender</p><div class="tg"><span class="k">Kürzel</span><span class="k">Name</span><span class="k">Absender</span><span class="k">Absender-E-Mail</span>
-  ${live("traeger").map(t=>`<input class="ed" data-bind="t:${esc(t.id)}:kuerzel" value="${esc(t.kuerzel)}" aria-label="Kürzel ${esc(t.name)}"><input class="ed" data-bind="t:${esc(t.id)}:name" value="${esc(t.name)}" aria-label="Name ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_name" value="${esc(t.absender_name)}" aria-label="Absender ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_email" value="${esc(t.absender_email)}" aria-label="Absender-E-Mail ${esc(t.kuerzel)}">`).join("")||'<span class="k" style="grid-column:1/-1">noch keine</span>'}</div>
+  <div><p class="sek" style="padding-bottom:8px">Träger und Absender</p><div class="tg"><span class="k">Kürzel</span><span class="k">Name</span><span class="k">Absender</span><span class="k">Vorname</span><span class="k">Absender-E-Mail</span>
+  ${live("traeger").map(t=>`<input class="ed" data-bind="t:${esc(t.id)}:kuerzel" value="${esc(t.kuerzel)}" aria-label="Kürzel ${esc(t.name)}"><input class="ed" data-bind="t:${esc(t.id)}:name" value="${esc(t.name)}" aria-label="Name ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_name" value="${esc(t.absender_name)}" aria-label="Absender ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_vorname" value="${esc(t.absender_vorname)}" placeholder="${esc((t.absender_name||"").trim().split(/\s+/)[0]||"")}" aria-label="Vorname (für Du-Vorlagen) ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_email" value="${esc(t.absender_email)}" aria-label="Absender-E-Mail ${esc(t.kuerzel)}">`).join("")||'<span class="k" style="grid-column:1/-1">noch keine</span>'}</div>
   ${live("traeger").map(t=>`<div class="tbes"><label class="k" for="tb-${esc(t.id)}">Beschreibung ${esc(t.kuerzel)} <span class="k">· Platzhalter {Träger-Beschreibung}</span></label><textarea id="tb-${esc(t.id)}" class="text" data-bind="t:${esc(t.id)}:beschreibung" rows="2">${esc(t.beschreibung)}</textarea></div>`).join("")}</div>
   <div><p class="sek" style="padding-bottom:8px">GitHub-Sync</p>${syncTeil}
     <p id="sync-st" class="k${syncState==="error"?" fehler":""}" role="status" style="margin:8px 0 0">${esc(ui.sfMeldung||syncZeile())}</p></div>
   ${uebergangTeil()}
-  <div><p class="sek" style="padding-bottom:8px">Daten</p><p class="k" style="margin:0 0 10px">Lokaler Bestand: ${istTestdaten()?"Testdaten":DB.herkunft==="v1-migration"?"aus v1 übernommen":"eigene Daten"}${syncCfg?", wird synchronisiert":", nur in diesem Browser"}.</p>
+  <div><p class="sek" style="padding-bottom:8px">Daten</p><p class="k" style="margin:0 0 10px">${istTestdaten()?"In diesem Browser sind nur Testdaten.":syncCfg?"Die Daten liegen in diesem Browser und werden laufend mit GitHub abgeglichen. «Als JSON sichern» lädt eine Kopie als Datei herunter.":"Die Daten liegen nur in diesem Browser (kein Sync). «Als JSON sichern» lädt eine Kopie als Datei herunter."}</p>
   <span class="links"><button class="lnk" data-act="export">Als JSON sichern</button><button class="lnk" data-act="import">JSON laden …</button>${syncCfg?"":sicher("reset","Testdaten neu laden","Alle Daten ersetzen?")}</span></div></div>`;
 }
 /* Alles rund um den Übergang von v1 in einem einklappbaren Block (Notiz 18.10.) */
 function uebergangTeil(){
+  if(syncCfg)return""; // Übergang abgeschlossen (Leowie 18.10.): mit Sync kein v1-Block mehr
   const ohneSync=!syncCfg&&(istTestdaten()||!live("projekte").length);
   if(ohneSync)return `<div><p class="sek" style="padding-bottom:8px">Daten aus v1 übernehmen</p>${migTeil()}</div>`;
   const teile=[["Vorlagen anlegen",vorschlagTeil()],["Fachgruppen",fgTeil()],["Massnahmen aufräumen",aufrTeil()],["Projektfelder korrigieren",feldTeil()]];
@@ -1562,7 +1563,7 @@ const ACT={
   "import-toggle"(){ui.importOffen=!ui.importOffen;render(ui.importOffen?"#imp":null)},
   "import-ok"(){const k=get("kanaele",ui.kanal),neu=parseKontakte($("#imp").value);const da=new Set((k.kontakte||[]).map(c=>norm(c.email)).filter(Boolean));const add2=neu.filter(c=>!c.email||!da.has(norm(c.email)));k.kontakte=(k.kontakte||[]).concat(add2);touch(k);ui.importOffen=false;render();toast(`${add2.length} Kontakte übernommen${neu.length>add2.length?`, ${neu.length-add2.length} doppelt`:""}`)},
   pfilter(a){ui.presetFilter=a;render()},
-  einst(){renderEinst();$("#einst").showModal()},
+  einst(){renderEinst();$("#einst").showModal();grow()},
   "einst-zu"(){$("#einst").close()},
   export(){const b=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`kommunikation-v2-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)},
   import(){$("#importfile").click()},
