@@ -222,6 +222,10 @@ tr.dzeile>td{background:var(--hover);border-bottom:1px solid var(--line2);paddin
 .tplv{display:flex;flex-direction:column;gap:4px;border:1px dashed var(--line2);border-radius:8px;padding:8px 12px}
 .tplb{margin:0;font-size:13px;color:var(--text2)}
 .tplt{margin:0;font-size:13px;color:var(--text2);white-space:pre-wrap;max-height:220px;overflow:auto}
+.ueb summary{cursor:pointer;list-style-position:outside}
+.ueb[open] summary{margin-bottom:10px}
+.uebi{display:flex;flex-direction:column;gap:16px;padding-left:2px}
+.kl{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:6px}
 .warnb{color:var(--warn)!important}
 .vwl{display:flex;flex-direction:column;gap:4px}
 .vwz{display:flex;align-items:center;gap:12px}
@@ -324,7 +328,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 <script>
 "use strict";
 /* ================= Konstanten und Hilfen ================= */
-const TYPEN=["Vor Ort","Website","Agenda & Newsletter","Medien","Soziale Netzwerke","Persönliche Einladung"]; // D-003
+const TYPEN=["Agenda & Newsletter","Medien","Persönliche Einladung","Soziale Netzwerke","Vor Ort","Website"]; // D-003, alphabetisch (Notiz 18.10.)
 const FORMEN={email:"E-Mail",formular:"Formular",post:"Post",vor_ort:"Vor Ort"};
 const STATUS={offen:"offen",laeuft:"läuft",erledigt:"erledigt"};
 const STD_FELDER=["Form","Dauer","Kosten","Wetter","Anmeldung","Für wen"];
@@ -406,7 +410,7 @@ const ueber=r=>sOf(r)==="offen"&&r.bis&&r.bis<today();
 function ensureStatus(p,key){let st=statusOf(p,key);if(!st){const[kid,mid]=key.split(":");st=add("status",{projekt_id:p.id,kanal_id:kid,massnahme_id:mid,status:"offen",erledigt_am:null,manuell:false})}return st}
 const emails=k=>(k.kontakte||[]).map(c=>c.email).filter(Boolean);
 
-const PH_HILFE=`Aus der Projekt-Kartei: {Titel} {Untertitel} {Datum} {Datum kurz} {Zeit} {Ort} {Treffpunkt} {Mitwirkende} {Kurzbeschreibung} {Lange Beschreibung} {Kurzbios} · jedes Feld aus «Weitere Angaben», z. B. {Form} {Dauer} {Kosten} {Wetter} {Anmeldung} · vom Träger: {Träger} {Träger-Beschreibung} {Absender} {Absender-E-Mail}. Eine Zeile, deren Platzhalter alle leer sind, fällt weg. Unbekannte Platzhalter wie {Name} bleiben als Lücke stehen.`;
+const PH_HILFE=`Aus der Projekt-Kartei: {Titel} {Untertitel} {Datum} {Datum kurz} {Zeit} {Ort} {Treffpunkt} {Mitwirkende} {Kurzbeschreibung} {Lange Beschreibung} {Kurzbios} · jedes Feld aus «Weitere Angaben», z. B. {Form} {Dauer} {Kosten} {Wetter} {Anmeldung} · vom Träger: {Träger} {Träger-Beschreibung} {Absender} {Absender-Vorname} {Absender-E-Mail}. Eine Zeile, deren Platzhalter alle leer sind, fällt weg. Unbekannte Platzhalter wie {Name} bleiben als Lücke stehen.`;
 /* Vorlage einer Kanal-Massnahme: geteilte Vorlage (D-027) oder eigener Text */
 /* Mehrere Vorlagen pro Kanal-Massnahme (P-018); gewählt wird im Projekt, Standard = erste */
 const vIds=m=>(m.vorlage_ids||(m.vorlage_id?[m.vorlage_id]:[])).filter(id=>get("vorlagen",id));
@@ -423,7 +427,7 @@ function werte(p){
   const m={Titel:p.titel||"",Untertitel:p.untertitel||"",Datum:t[0]&&t[0].datum?fmtLang(t[0].datum):"",
     Zeit:(z[0]&&z[0].wert)||"",Ort:(o[0]&&o[0].wert)||"",Mitwirkende:liste(mw.map(x=>x.name)),
     Kurzbeschreibung:p.kurz||"","Lange Beschreibung":p.lang||"",Kurzbios:biosText(p),
-    Absender:tr.absender_name||"","Absender-E-Mail":tr.absender_email||"",Träger:tr.name||"","Träger-Beschreibung":tr.beschreibung||"",
+    Absender:tr.absender_name||"","Absender-E-Mail":tr.absender_email||"",Träger:tr.name||"","Träger-Beschreibung":tr.beschreibung||"","Absender-Vorname":tr.absender_vorname||(tr.absender_name||"").trim().split(/\s+/)[0]||"",
     "Datum kurz":t[0]&&t[0].datum?`${parse(t[0].datum).getDate()}. ${MON[parse(t[0].datum).getMonth()]}`:"",
     Treffpunkt:(o.find(x=>/treffpunkt/i.test(x.zusatz||""))||{}).wert||""};
   for(const f of p.felder||[])if(f.k)m[f.k]=f.v||"";
@@ -821,8 +825,7 @@ function karteiPr(pr){
 /* ---- Einstellungen ---- */
 function renderEinst(){
   const f=ui.sf;
-  const syncTeil=syncCfg?`<p class="k" style="margin:0 0 8px">Verbunden mit <b>${esc(syncCfg.owner)}/${esc(syncCfg.repo)}</b> · Datei <b>${esc(syncCfg.path)}</b>. Die alte <code>data.json</code> wird nie geschrieben.</p>
-      <span class="links"><button class="lnk" data-act="sync-jetzt">Jetzt synchronisieren</button><button class="lnk m" data-act="sync-trennen">Trennen</button></span>`
+  const syncTeil=syncCfg?`<span class="links"><span class="k">Verbunden mit ${esc(syncCfg.owner)}/${esc(syncCfg.repo)} · ${esc(syncCfg.path)}</span><button class="lnk" data-act="sync-jetzt">Jetzt synchronisieren</button><button class="lnk m" data-act="sync-trennen">Trennen</button></span>`
     :`<p class="k" style="margin:0 0 10px">Daten als JSON im privaten Repo, Datei <code>data-v2.json</code>. Token unter <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">github.com/settings/tokens</a>, «Contents: Read and write» auf das Daten-Repo genügt. Das Token bleibt nur in diesem Browser.</p>
       <div class="sfg"><label class="k" for="sf-owner">GitHub-Benutzer</label><input class="ed sfi" id="sf-owner" value="${esc(f.owner)}" autocomplete="off" placeholder="Benutzername">
       <label class="k" for="sf-repo">Repository</label><input class="ed sfi" id="sf-repo" value="${esc(f.repo)}" autocomplete="off">
@@ -836,12 +839,38 @@ function renderEinst(){
   ${live("traeger").map(t=>`<div class="tbes"><label class="k" for="tb-${esc(t.id)}">Beschreibung ${esc(t.kuerzel)} <span class="k">· Platzhalter {Träger-Beschreibung}</span></label><textarea id="tb-${esc(t.id)}" class="text" data-bind="t:${esc(t.id)}:beschreibung" rows="2">${esc(t.beschreibung)}</textarea></div>`).join("")}</div>
   <div><p class="sek" style="padding-bottom:8px">GitHub-Sync</p>${syncTeil}
     <p id="sync-st" class="k${syncState==="error"?" fehler":""}" role="status" style="margin:8px 0 0">${esc(ui.sfMeldung||syncZeile())}</p></div>
-  <div><p class="sek" style="padding-bottom:8px">Daten aus v1 übernehmen</p>${migTeil()}</div>
-  ${vorschlagTeil()}
-  ${aufrTeil()}
-  ${restTeil()}
+  ${uebergangTeil()}
   <div><p class="sek" style="padding-bottom:8px">Daten</p><p class="k" style="margin:0 0 10px">Lokaler Bestand: ${istTestdaten()?"Testdaten":DB.herkunft==="v1-migration"?"aus v1 übernommen":"eigene Daten"}${syncCfg?", wird synchronisiert":", nur in diesem Browser"}.</p>
   <span class="links"><button class="lnk" data-act="export">Als JSON sichern</button><button class="lnk" data-act="import">JSON laden …</button>${syncCfg?"":sicher("reset","Testdaten neu laden","Alle Daten ersetzen?")}</span></div></div>`;
+}
+/* Alles rund um den Übergang von v1 in einem einklappbaren Block (Notiz 18.10.) */
+function uebergangTeil(){
+  const ohneSync=!syncCfg&&(istTestdaten()||!live("projekte").length);
+  if(ohneSync)return `<div><p class="sek" style="padding-bottom:8px">Daten aus v1 übernehmen</p>${migTeil()}</div>`;
+  const teile=[["Vorlagen anlegen",vorschlagTeil()],["Fachgruppen",fgTeil()],["Massnahmen aufräumen",aufrTeil()],["Projektfelder korrigieren",feldTeil()]];
+  const offen=teile.filter(x=>x[1]).map(x=>x[0]);
+  if(!offen.length&&!restTeil()&&syncCfg)return"";
+  return `<details class="ueb" ${ui.uebOffen?"open":""}><summary data-act="ueb-toggle"><span class="sek">Übergang von v1</span> <span class="k">${offen.length?"– noch offen: "+esc(offen.join(", ")):"– erledigt"}</span></summary>
+    <div class="uebi">${teile.map(x=>x[1]).join("")}${restTeil()}${syncCfg?"":`<div><p class="sek" style="padding-bottom:8px">Daten aus v1 übernehmen</p>${migTeil()}</div>`}</div></details>`;
+}
+function fgKanal(){const ks=live("kanaele").filter(k=>norm(k.name)==="fachgruppen");return ks.length===1?ks[0]:null}
+function fgTeil(){
+  const k=fgKanal(),fg=((DB.v1_rest||{}).kontakte||[]).filter(c=>c.kategorie==="Fachgruppe");
+  if(!k||!fg.length)return"";
+  return `<div><p class="sek" style="padding-bottom:6px">Fachgruppen</p><p class="k" style="margin:0 0 6px">${fg.length} Kontakte der Kategorie «Fachgruppe» aus v1 in den Kanal «${esc(k.name)}» übernehmen (doppelte Adressen werden übersprungen).</p>
+    <span class="links"><button class="lnk stark" data-act="fg-ok">${fg.length} Kontakte übernehmen</button></span></div>`;
+}
+function feldPlan(){
+  const ps=live("projekte"),kat=ps.filter(p=>(p.felder||[]).some(f=>/^(Kategorien|Tags)$/.test(f.k))),dauer=ps.filter(p=>(p.felder||[]).some(f=>f.k==="Dauer"&&/(^|\D)1 Stunden/.test(f.v||"")));
+  const du=live("vorlagen").filter(v=>/per Du/i.test(v.name)&&/\{Absender\}/.test(v.text||""));
+  return{kat,dauer,du};
+}
+function feldTeil(){
+  const{kat,dauer,du}=feldPlan();if(!kat.length&&!dauer.length&&!du.length)return"";
+  return `<div><p class="sek" style="padding-bottom:6px">Projektfelder korrigieren</p><ul class="kl">
+    ${kat.length?`<li>Felder «Kategorien» und «Tags» aus v1 haben in v2 keine Funktion (keine Filter) – entfernen in ${kat.length} Projekten. <button class="lnk" data-act="fk" data-arg="kat">entfernen</button></li>`:""}
+    ${dauer.length?`<li>«1 Stunden» → «1 Stunde» in ${dauer.length} Projekten. <button class="lnk" data-act="fk" data-arg="dauer">korrigieren</button></li>`:""}
+    ${du.length?`<li>Du-Vorlage unterschreibt mit vollem Namen: {Absender} → {Absender-Vorname} in «${esc(du.map(v=>v.name).join("», «"))}». <button class="lnk" data-act="fk" data-arg="du">ersetzen</button></li>`:""}</ul></div>`;
 }
 function migTeil(){
   if(syncCfg)return `<p class="k" style="margin:0">Nur ohne Sync möglich: Die Übernahme ersetzt den lokalen Bestand. Zuerst trennen.</p>`;
@@ -1073,7 +1102,7 @@ function v1Text(s,offen){
 }
 const v1Iso=s=>{const m=String(s||"").match(/^(\d{4}-\d{2}-\d{2})/);return m?m[1]:""};
 function v1Liste(s){if(s==null)return"";if(Array.isArray(s))return s.join(", ");const t=String(s).trim();if(!t||t==="[]")return"";try{const j=JSON.parse(t);if(Array.isArray(j))return j.join(", ")}catch(e){}return t}
-function v1Dauer(v){const m=+v.dauer_minuten||0,f=m?(m<60?m+" Minuten":Math.floor(m/60)+(m%60?` h ${m%60} min`:" Stunden")):"";return v.open_end?(f?f+", danach open end":"open end"):f}
+function v1Dauer(v){const m=+v.dauer_minuten||0,f=m?(m<60?m+" Minuten":Math.floor(m/60)+(m%60?` h ${m%60} min`:m===60?" Stunde":" Stunden")):"";return v.open_end?(f?f+", danach open end":"open end"):f}
 function v1Form(typ,url){return typ==="Vor Ort"?"vor_ort":typ==="Medien"||typ==="Persönliche Einladung"?"email":typ==="Agenda & Newsletter"?(url?"formular":"email"):"post"}
 function v1Kontakt(c){return{name:c.name||c.organisation||"",email:(c.email||"").trim(),notiz:[c.name&&c.organisation?c.organisation:"",c.bezirk,c.adresse,c.telefon,c.notiz].filter(Boolean).join(" · ")}}
 function migrateV1(d){
@@ -1325,7 +1354,7 @@ Anmeldung: {Anmeldung}
 Flyer mit allen Infos im Anhang.
 
 Herzliche Grüsse
-{Absender}`},
+{Absender-Vorname}`},
  {name:"Agenda-Eintrag (kompakt)",betreff:"",text:`{Titel}
 {Untertitel}
 {Datum}, {Zeit}
@@ -1557,6 +1586,16 @@ const ACT={
     const bearb=r.st&&r.st.versand&&(r.st.versand.text!=null||r.st.versand.betreff!=null);
     if(bearb&&ui.sicher!=="vw|"+a){ui.sicher="vw|"+a;render();return}
     ui.sicher=null;const st=ensureStatus(p,key);st.vorlage_wahl=vid;if(st.versand){delete st.versand.text;delete st.versand.betreff}touch(st);render(`[data-act="vwahl"][data-arg="${CSS.escape(a)}"]`)},
+  "ueb-toggle"(a,b,e){if(e)e.preventDefault();ui.uebOffen=!ui.uebOffen;renderEinst()},
+  "fg-ok"(){const k=fgKanal(),r=DB.v1_rest;if(!k||!r)return;const fg=r.kontakte.filter(c=>c.kategorie==="Fachgruppe");
+    const da=new Set((k.kontakte||[]).map(c=>norm(c.email)).filter(Boolean));let n=0;
+    for(const c of fg){if(c.email&&da.has(norm(c.email)))continue;(k.kontakte=k.kontakte||[]).push({name:c.name||"",email:c.email||"",notiz:""});if(c.email)da.add(norm(c.email));n++}
+    r.kontakte=r.kontakte.filter(c=>c.kategorie!=="Fachgruppe");touch(k);saveNow();render();renderEinst();toast(`${n} Kontakte im Kanal «${k.name}»`)},
+  fk(a){const{kat,dauer,du}=feldPlan();
+    if(a==="kat")for(const p of kat){p.felder=p.felder.filter(f=>!/^(Kategorien|Tags)$/.test(f.k));touch(p)}
+    if(a==="dauer")for(const p of dauer){for(const f of p.felder)if(f.k==="Dauer")f.v=f.v.replace(/(^|\D)1 Stunden/g,"$11 Stunde");touch(p)}
+    if(a==="du")for(const v of du){v.text=v.text.replace(/\{Absender\}/g,"{Absender-Vorname}");touch(v)}
+    render();renderEinst();toast("korrigiert")},
   "aufr-ok"(){const n=aufrAusfuehren();ui.kmAuf=null;render();renderEinst();toast(`${n} ${n===1?"Kanal":"Kanäle"} aufgeräumt`)},
   "sync-dot"(){if(syncCfg)syncNow();else ACT.einst()},
   "sync-verbinden"(){syncVerbinden()},
