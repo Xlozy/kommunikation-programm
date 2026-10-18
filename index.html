@@ -219,6 +219,29 @@ tr.dzeile>td{background:var(--hover);border-bottom:1px solid var(--line2);paddin
 .ffr{display:grid;grid-template-columns:140px minmax(0,1fr) 70px 20px;gap:8px;align-items:center;font-size:13px}
 .ffr input.ed{font-size:13px}
 .ph{color:var(--accent)}
+.tplv{display:flex;flex-direction:column;gap:4px;border:1px dashed var(--line2);border-radius:8px;padding:8px 12px}
+.tplb{margin:0;font-size:13px;color:var(--text2)}
+.tplt{margin:0;font-size:13px;color:var(--text2);white-space:pre-wrap;max-height:220px;overflow:auto}
+.pz.vz{grid-template-columns:28px minmax(0,220px) minmax(0,1fr) minmax(0,180px)}
+.pz.vz>.k:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbes{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+#notizpanel{position:fixed;top:58px;right:12px;width:min(400px,calc(100vw - 24px));background:#262a30;border:1px solid var(--line3);border-radius:10px;box-shadow:0 16px 40px rgba(0,0,0,.45);padding:12px 14px;z-index:20;display:flex;flex-direction:column;gap:8px}
+#notizpanel[hidden]{display:none}
+.nzk{display:flex;justify-content:space-between;align-items:center}
+.nzk .icon{padding:2px 6px;font-size:18px}
+.nzort{margin:0;font-size:13px;color:var(--text2);display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.nzort .lnk{font-size:12px}
+.nzart{display:flex;gap:2px}
+.nzt{width:100%;font:inherit;font-size:14px;line-height:1.5;background:var(--field);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;resize:vertical;outline:none}
+.nzt:focus{border-color:var(--line3)}
+.nzf{display:flex;align-items:center}
+.nzg{padding:14px 0 6px;border-bottom:1px solid var(--line)}
+.nzl{list-style:none;margin:0;padding:0}
+.nzl li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.nzl li input{margin-top:3px}
+.nzl li.erl .nztx{color:var(--muted);text-decoration:line-through}
+.nzl p{margin:0}.nzl .k .lnk{font-size:12px}
+.nza{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-right:4px}
 .phd summary{cursor:pointer;font-size:12px;color:var(--muted);width:max-content}
 .phd summary:hover{color:var(--text)}
 .phd[open] summary{margin-bottom:4px}
@@ -276,6 +299,9 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
     <kbd aria-hidden="true">⌘F</kbd>
   </label>
   <button class="icon" id="syncdot" data-act="sync-dot" aria-label="Sync"><span class="dot off"></span></button>
+  <button class="icon" id="nzbtn" data-act="notiz" aria-label="Notiz zur App" title="Notiz: Fehler, Verbesserung, Idee – der Ort wird automatisch erfasst">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+  </button>
   <button class="icon" data-act="einst" aria-label="Einstellungen">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09A1.7 1.7 0 009 19.37a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.63 15a1.7 1.7 0 00-1.56-1.04H3a2 2 0 110-4h.09A1.7 1.7 0 004.63 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.63a1.7 1.7 0 001.04-1.56V3a2 2 0 114 0v.09a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.37 9a1.7 1.7 0 001.56 1.04H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.51 1.04z"/></svg>
   </button>
@@ -285,6 +311,8 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
   <main id="main" aria-label="Kartei"></main>
 </div>
 <dialog id="einst" aria-labelledby="einst-h"></dialog>
+<dialog id="notizen" aria-label="Notizen"></dialog>
+<div id="notizpanel" role="dialog" aria-labelledby="nz-h" hidden></div>
 <input type="file" id="importfile" accept="application/json,.json" hidden>
 <input type="file" id="v1file" accept="application/json,.json" hidden>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -327,18 +355,20 @@ let saveT=null;
 function save(){clearTimeout(saveT);saveT=setTimeout(saveNow,250);if(typeof scheduleSync==="function")scheduleSync()}
 function saveNow(){try{localStorage.setItem(KEY_DATA,JSON.stringify(DB))}catch(e){toast("Speichern im Browser fehlgeschlagen")}}
 window.addEventListener("beforeunload",()=>{if(saveT){clearTimeout(saveT);saveNow()}saveUI()});
-const live=c=>DB[c].filter(r=>!r.deleted);
-const get=(c,id)=>id?DB[c].find(r=>r.id===id&&!r.deleted):undefined;
+const live=c=>(DB[c]||[]).filter(r=>!r.deleted);
+function dbVollstaendig(){for(const c of ["traeger","projekte","kanaele","presets","status","vorlagen","notizen"])if(!Array.isArray(DB[c]))DB[c]=[]}
+const get=(c,id)=>id?(DB[c]||[]).find(r=>r.id===id&&!r.deleted):undefined;
 function touch(r){r.modified=nowISO();save()}
-function add(c,r){r.id=r.id||uid();r.modified=nowISO();DB[c].push(r);save();return r}
+function add(c,r){r.id=r.id||uid();r.modified=nowISO();(DB[c]=DB[c]||[]).push(r);save();return r}
 function tomb(r){r.deleted=true;touch(r)} // Tombstone für späteren Record-Merge
 
 /* ================= Ansicht ================= */
 const ui={bereich:"projekte",traeger:"vspw",projekt:null,kanal:null,preset:null,kanalAnsicht:"kanaele",q:"",
   vergangene:false,dEdit:null,massAuf:false,sort:{k:"bis",dir:1},auf:null,menu:false,addMass:false,kmAuf:null,
   presetFilter:"alle",importOffen:false,sicher:null,addQ:"",addSel:0,
-  sf:{owner:"",repo:"kommunikation-data",path:"data-v2.json",token:""},sfMeldung:"",syncSchritt:null,mig:null};
-const UI_KEEP=["bereich","traeger","projekt","kanal","preset","kanalAnsicht","massAuf","sort","presetFilter"];
+  sf:{owner:"",repo:"kommunikation-data",path:"data-v2.json",token:""},sfMeldung:"",syncSchritt:null,mig:null,
+  vorlage:null,vorlageFilter:"alle",notiz:{offen:false,art:"Verbesserung",text:"",ort:null},notizFilter:"offen",teil:""};
+const UI_KEEP=["bereich","traeger","projekt","kanal","preset","vorlage","kanalAnsicht","massAuf","sort","presetFilter"];
 function loadUI(){try{const s=JSON.parse(localStorage.getItem(KEY_UI)||"{}");for(const k of UI_KEEP)if(k in s)ui[k]=s[k]}catch(e){}}
 function saveUI(){try{const o={};for(const k of UI_KEEP)o[k]=ui[k];localStorage.setItem(KEY_UI,JSON.stringify(o))}catch(e){}}
 
@@ -372,6 +402,10 @@ const ueber=r=>sOf(r)==="offen"&&r.bis&&r.bis<today();
 function ensureStatus(p,key){let st=statusOf(p,key);if(!st){const[kid,mid]=key.split(":");st=add("status",{projekt_id:p.id,kanal_id:kid,massnahme_id:mid,status:"offen",erledigt_am:null,manuell:false})}return st}
 const emails=k=>(k.kontakte||[]).map(c=>c.email).filter(Boolean);
 
+const PH_HILFE=`Aus der Projekt-Kartei: {Titel} {Untertitel} {Datum} {Datum kurz} {Zeit} {Ort} {Treffpunkt} {Mitwirkende} {Kurzbeschreibung} {Lange Beschreibung} {Kurzbios} · jedes Feld aus «Weitere Angaben», z. B. {Form} {Dauer} {Kosten} {Wetter} {Anmeldung} · vom Träger: {Träger} {Träger-Beschreibung} {Absender} {Absender-E-Mail}. Eine Zeile, deren Platzhalter alle leer sind, fällt weg. Unbekannte Platzhalter wie {Name} bleiben als Lücke stehen.`;
+/* Vorlage einer Kanal-Massnahme: geteilte Vorlage (D-027) oder eigener Text */
+function tplOf(m){const v=m.vorlage_id&&get("vorlagen",m.vorlage_id);return v?{name:v.name||"",betreff:v.betreff||"",text:v.text||"",geteilt:v}:Object.assign({name:"",betreff:"",text:""},m.vorlage,{geteilt:null})}
+const tplName=m=>{const t=tplOf(m);return t.geteilt?(t.name||"ohne Namen"):(t.text||t.betreff?"eigener Text":"")};
 /* Platzhalter aus der Projekt-Kartei */
 function werte(p){
   const t=p.termine||[],z=p.zeiten||[],o=p.orte||[],mw=(p.mitwirkende||[]).filter(x=>x.name);
@@ -379,20 +413,27 @@ function werte(p){
   const m={Titel:p.titel||"",Untertitel:p.untertitel||"",Datum:t[0]&&t[0].datum?fmtLang(t[0].datum):"",
     Zeit:(z[0]&&z[0].wert)||"",Ort:(o[0]&&o[0].wert)||"",Mitwirkende:liste(mw.map(x=>x.name)),
     Kurzbeschreibung:p.kurz||"","Lange Beschreibung":p.lang||"",Kurzbios:biosText(p),
-    Absender:tr.absender_name||"","Absender-E-Mail":tr.absender_email||"",Träger:tr.name||"",
+    Absender:tr.absender_name||"","Absender-E-Mail":tr.absender_email||"",Träger:tr.name||"","Träger-Beschreibung":tr.beschreibung||"",
     "Datum kurz":t[0]&&t[0].datum?`${parse(t[0].datum).getDate()}. ${MON[parse(t[0].datum).getMonth()]}`:"",
     Treffpunkt:(o.find(x=>/treffpunkt/i.test(x.zusatz||""))||{}).wert||""};
   for(const f of p.felder||[])if(f.k)m[f.k]=f.v||"";
   return m;
 }
-function fill(s,p,extra){const m=Object.assign(werte(p),extra||{});return String(s||"").replace(/\{([^{}]+)\}/g,(a,k)=>k in m?m[k]:a)}
+/* P-015: Eine Zeile, deren (bekannte) Platzhalter alle leer sind, fällt weg; unbekannte bleiben als Lücke stehen */
+function fill(s,p,extra){
+  const m=Object.assign(werte(p),extra||{});
+  const z=String(s||"").split("\n").flatMap(zeile=>{let bek=0,voll=0,unbek=0;
+    const r=zeile.replace(/\{([^{}]+)\}/g,(a,k)=>{if(!(k in m)){unbek++;return a}bek++;const v=String(m[k]??"");if(v.trim())voll++;return v});
+    return bek&&!voll&&!unbek?[]:[r]});
+  return z.join("\n").replace(/\n{3,}/g,"\n\n");
+}
 function biosText(p){return(p.mitwirkende||[]).filter(x=>x.name&&x.bio).map(x=>`${x.name} – ${x.bio}`).join("\n\n")}
 function versand(p,r){
-  const v=(r.st&&r.st.versand)||{},tpl=r.m.vorlage||{};
+  const v=(r.st&&r.st.versand)||{},tpl=tplOf(r.m);
   return{betreff:v.betreff!=null?v.betreff:fill(tpl.betreff,p),text:v.text!=null?v.text:fill(tpl.text,p),
     anhaenge:v.anhaenge!=null?v.anhaenge:(p.material||[]).slice(0,1).map(x=>x.name).filter(Boolean)};
 }
-function formFelder(p,r){const vt=fill((r.m.vorlage||{}).text,p);return(r.m.formular_felder||[]).map(f=>({label:f.label,limit:f.limit,wert:fill(f.wert,p,{Vorlage:vt})}))}
+function formFelder(p,r){const vt=fill(tplOf(r.m).text,p);return(r.m.formular_felder||[]).map(f=>({label:f.label,limit:f.limit,wert:fill(f.wert,p,{Vorlage:vt})}))}
 function kernText(p,f){
   const L={termine:x=>x.datum?fmtLang(x.datum)+(x.zusatz?` (${x.zusatz})`:""):"",zeiten:x=>x.wert?x.wert+(x.zusatz?` (${x.zusatz})`:""):"",
     orte:x=>x.wert?x.wert+(x.zusatz?` (${x.zusatz})`:""):"",mitwirkende:x=>x.name?x.name+(x.rolle?` (${x.rolle})`:""):""};
@@ -452,12 +493,15 @@ function renderSide(){
       (gr.length?gr.map(x=>`<h3 class="gruppe">${esc(x.g)}</h3><ul class="liste">${x.ps.map(eintragP).join("")}</ul>`).join(""):`<p class="leer">${ui.q?"Nichts gefunden.":"Noch keine Projekte. Mit «+» anlegen."}</p>`)+
       (verg.length?`<button class="verg" data-act="vergangene" aria-expanded="${ui.vergangene||!!ui.q}">Vergangene (${verg.length}) ${ui.vergangene||ui.q?"▾":"▸"}</button>${ui.vergangene||ui.q?`<ul class="liste">${verg.map(eintragP).join("")}</ul>`:""}`:"");
   }else{
-    const kopf=`<div class="shead"><span role="group" aria-label="Ansicht" style="display:flex;gap:2px"><button class="sub" data-act="kansicht" data-arg="kanaele" aria-pressed="${ui.kanalAnsicht==="kanaele"}">Kanäle</button><button class="sub" data-act="kansicht" data-arg="presets" aria-pressed="${ui.kanalAnsicht==="presets"}">Presets</button></span><span class="sp"></span>${traegerSelect()}<button class="plus" data-act="${ui.kanalAnsicht==="kanaele"?"new-k":"new-pr"}" aria-label="${ui.kanalAnsicht==="kanaele"?"Kanal":"Preset"} hinzufügen">+</button></div>`;
+    const kopf=`<div class="shead"><span role="group" aria-label="Ansicht" style="display:flex;gap:2px"><button class="sub" data-act="kansicht" data-arg="kanaele" aria-pressed="${ui.kanalAnsicht==="kanaele"}">Kanäle</button><button class="sub" data-act="kansicht" data-arg="presets" aria-pressed="${ui.kanalAnsicht==="presets"}">Presets</button><button class="sub" data-act="kansicht" data-arg="vorlagen" aria-pressed="${ui.kanalAnsicht==="vorlagen"}">Vorlagen</button></span><span class="sp"></span>${traegerSelect()}<button class="plus" data-act="${{kanaele:"new-k",presets:"new-pr",vorlagen:"new-v"}[ui.kanalAnsicht]}" aria-label="${{kanaele:"Kanal",presets:"Preset",vorlagen:"Vorlage"}[ui.kanalAnsicht]} hinzufügen">+</button></div>`;
     if(ui.kanalAnsicht==="kanaele"){
       const ks=live("kanaele").filter(k=>(k.traeger_ids||[]).includes(ui.traeger)&&match(norm([k.name,k.typ,k.notiz,k.link,(k.kontakte||[]).map(c=>c.name+" "+c.email).join(" "),(k.massnahmen||[]).map(m=>m.name).join(" ")].join(" "))));
       const html=TYPEN.map(typ=>{const g=ks.filter(k=>k.typ===typ).sort((a,b)=>a.name.localeCompare(b.name,"de"));if(!g.length)return"";
         return `<h3 class="gruppe">${esc(typ)}</h3><ul class="liste">${g.map(k=>`<li><button class="eintrag" data-act="open-k" data-arg="${esc(k.id)}" aria-current="${k.id===ui.kanal}"><span class="t">${esc(k.name)}</span><span class="w">${esc((k.massnahmen||[]).map(m=>m.name+" "+(m.vorlauf_tage==null?"läuft":m.vorlauf_tage+" T")).join(" · ")||"keine Massnahmen")}</span></button></li>`).join("")}</ul>`}).join("");
       s.innerHTML=kopf+(html||`<p class="leer">${ui.q?"Nichts gefunden.":"Noch keine Kanäle."}</p>`);
+    }else if(ui.kanalAnsicht==="vorlagen"){
+      const vs=live("vorlagen").filter(v=>v.traeger_id===ui.traeger&&match(norm(v.name+" "+v.betreff+" "+v.text))).sort((a,b)=>a.name.localeCompare(b.name,"de"));
+      s.innerHTML=kopf+(vs.length?`<ul class="liste">${vs.map(v=>{const n=vorlageNutzer(v.id).length;return `<li><button class="eintrag" data-act="open-v" data-arg="${esc(v.id)}" aria-current="${v.id===ui.vorlage}"><span class="t">${esc(v.name||"ohne Namen")}</span><span class="w">${n?n+" Massnahmen":"noch keiner Massnahme zugeordnet"}</span></button></li>`}).join("")}</ul>`:`<p class="leer">${ui.q?"Nichts gefunden.":"Noch keine Vorlagen. Mit «+» anlegen."}</p>`);
     }else{
       const ps=live("presets").filter(p=>p.traeger_id===ui.traeger&&match(norm(p.name+" "+p.beschreibung)));
       s.innerHTML=kopf+(ps.length?`<ul class="liste">${ps.map(p=>`<li><button class="eintrag" data-act="open-pr" data-arg="${esc(p.id)}" aria-current="${p.id===ui.preset}"><span class="t">${esc(p.name)}</span><span class="w">${esc(p.beschreibung?p.beschreibung+" · ":"")}${p.kanal_massnahmen.filter(kmByKey).length} Massnahmen</span></button></li>`).join("")}</ul>`:`<p class="leer">Noch keine Presets.</p>`);
@@ -470,6 +514,7 @@ function renderMain(){
   const m=$("#main");
   if(ui.bereich==="projekte"){const p=get("projekte",ui.projekt);m.innerHTML=p?karteiP(p):leer("Kein Projekt ausgewählt.")}
   else if(ui.kanalAnsicht==="kanaele"){const k=get("kanaele",ui.kanal);m.innerHTML=k?karteiK(k):leer("Kein Kanal ausgewählt.")}
+  else if(ui.kanalAnsicht==="vorlagen"){const v=get("vorlagen",ui.vorlage);m.innerHTML=v?karteiV(v):leer("Keine Vorlage ausgewählt.")}
   else{const p=get("presets",ui.preset);m.innerHTML=p?karteiPr(p):leer("Kein Preset ausgewählt.")}
   grow();
 }
@@ -622,7 +667,7 @@ function detailHTML(p,r){
     const v=versand(p,r),em=emails(r.k);
     const an=r.st&&r.st.status==="erledigt"&&r.st.versand&&r.st.versand.an?r.st.versand.an:em.length>1?`${r.k.name} · ${em.length} Adressen, als BCC`:em.length===1?`${(r.k.kontakte.find(c=>c.email)||{}).name||""} <${em[0]}>`:"";
     L=`<div class="ga"><span class="k">An</span><span>${an?esc(an):`<span class="k">Keine E-Mail-Adresse beim Kanal.</span> <button class="lnk" data-act="goto-kanal" data-arg="${esc(r.k.id)}">Kontakt ergänzen ›</button>`}</span>
-      <span class="k">Vorlage</span><span>${esc((r.m.vorlage||{}).name||r.m.name)}</span>
+      <span class="k">Vorlage</span><span>${esc(tplName(r.m)||"keine")}</span>
       <label class="k" for="vb-${esc(key)}">Betreff</label><input id="vb-${esc(key)}" class="ed" data-bind="${esc(b)}versand.betreff" value="${esc(v.betreff)}"></div>
       <label class="sr" for="vt-${esc(key)}">Text</label><textarea id="vt-${esc(key)}" class="text" data-bind="${esc(b)}versand.text" rows="6">${esc(v.text)}</textarea>`;
     R=`<div><span class="k">Anhänge</span>${mat.length?mat.map(m=>`<label class="chk ${v.anhaenge.includes(m.name)?"":"aus"}"><input type="checkbox" data-chg="anhang" data-arg="${esc(key+"|"+m.name)}" ${v.anhaenge.includes(m.name)?"checked":""}> ${esc(m.name)}</label>`).join(""):'<span class="k">kein Material</span>'}</div>
@@ -657,7 +702,7 @@ function karteiK(k){
   const zuletzt=live("status").filter(s=>s.kanal_id===k.id&&s.status==="erledigt"&&s.erledigt_am).sort((a,b)=>b.erledigt_am.localeCompare(a.erledigt_am)).slice(0,6);
   const kontakte=(k.kontakte||[]).map((c,i)=>`<div class="krow"><span style="display:flex;flex-direction:column;min-width:0"><input class="ed" data-bind="k:kontakte.${i}.name" value="${esc(c.name)}" placeholder="Name" aria-label="Kontakt ${i+1} Name"><input class="ed em" data-bind="k:kontakte.${i}.email" value="${esc(c.email)}" placeholder="E-Mail" aria-label="Kontakt ${i+1} E-Mail"></span>${rmB("kontakte|"+i,"Kontakt "+(i+1))}</div>`).join("");
   const felder=(k.felder||[]).map((f,i)=>`<div class="kkv"><input class="ed k" data-bind="k:felder.${i}.k" value="${esc(f.k)}" placeholder="Feld" aria-label="Feldname ${i+1}"><div class="krow" style="grid-template-columns:minmax(0,1fr) 20px"><input class="ed" data-bind="k:felder.${i}.v" value="${esc(f.v)}" aria-label="${esc(f.k||"Feld "+(i+1))}">${rmB("kfelder|"+i,f.k||"Feld")}</div></div>`).join("");
-  const mass=(k.massnahmen||[]).map(m=>{const auf=ui.kmAuf===m.id;return `<div class="mg z ${auf?"auf":""}" data-km="${esc(m.id)}"><button class="kn" data-act="km-auf" data-arg="${esc(m.id)}" aria-expanded="${auf}">${esc(m.name||"Ohne Namen")}</button><span>${m.vorlauf_tage==null?"läuft":m.vorlauf_tage+" Tage"}</span><span style="color:var(--text2)">${FORMEN[m.form]||""}</span><span style="color:var(--text2)">${esc((m.vorlage||{}).name||"")}</span></div>${auf?kmEditor(k,m):""}`}).join("");
+  const mass=(k.massnahmen||[]).map(m=>{const auf=ui.kmAuf===m.id;return `<div class="mg z ${auf?"auf":""}" data-km="${esc(m.id)}"><button class="kn" data-act="km-auf" data-arg="${esc(m.id)}" aria-expanded="${auf}">${esc(m.name||"Ohne Namen")}</button><span>${m.vorlauf_tage==null?"läuft":m.vorlauf_tage+" Tage"}</span><span style="color:var(--text2)">${FORMEN[m.form]||""}</span><span style="color:var(--text2)">${esc(tplName(m))}</span></div>${auf?kmEditor(k,m):""}`}).join("");
   return `<div class="kartei">
   <div class="kopf"><p class="sek">Kartei</p><span class="links">${sicher("k","Löschen")}<button class="lnk m" data-act="close">Schliessen</button></span></div>
   <div class="titel">${inp("k:name",k.name,'aria-label="Name des Kanals" placeholder="Name" data-rerender id="k-name"').replace('class="ed"','class="ed h1"')}<div class="untert" style="font-size:14px;color:var(--text2)">${esc(k.typ)} · für ${esc(tr.filter(t=>(k.traeger_ids||[]).includes(t.id)).map(t=>t.name).join(", ")||"keinen Träger")}</div></div>
@@ -691,20 +736,49 @@ function kmEditor(k,m){
     <div class="ffr k" aria-hidden="true"><span>Feld</span><span>Inhalt (Platzhalter)</span><span>max. Zeichen</span><span></span></div>
     ${(m.formular_felder||[]).map((f,i)=>`<div class="ffr"><input class="ed" data-bind="${b}formular_felder.${i}.label" value="${esc(f.label)}" placeholder="Feld" aria-label="Formularfeld ${i+1}"><input class="ed" data-bind="${b}formular_felder.${i}.wert" value="${esc(f.wert)}" placeholder="{Titel}" aria-label="Inhalt von Formularfeld ${i+1}"><input class="ed" type="number" min="0" data-bind="${b}formular_felder.${i}.limit" value="${f.limit??""}" aria-label="Zeichenlimit von Formularfeld ${i+1}"><button class="rm" data-act="ff-rm" data-arg="${esc(m.id+"|"+i)}" aria-label="Formularfeld ${i+1} entfernen">×</button></div>`).join("")}
     <button class="mehr" data-act="ff-add" data-arg="${esc(m.id)}">+ Feld</button></div>`:"";
-  const tpl=m.vorlage||{};
+  const tpl=tplOf(m),vs=live("vorlagen").filter(v=>(k.traeger_ids||[]).includes(v.traeger_id)).sort((a,b)=>a.name.localeCompare(b.name,"de"));
+  const tplTeil=tpl.geteilt
+    ?`<div class="tplv"><div class="thead"><span class="k">Text der Vorlage «${esc(tpl.name)}»</span><button class="lnk" data-act="goto-vorlage" data-arg="${esc(tpl.geteilt.id)}">Vorlage bearbeiten ›</button></div>${m.form==="email"&&tpl.betreff?`<p class="tplb">Betreff: ${esc(tpl.betreff)}</p>`:""}<p class="tplt">${esc(tpl.text)||'<span class="k">leer</span>'}</p></div>`
+    :`${m.form==="email"?`<div class="kmg"><label class="k" for="${id("vb")}">Betreff</label><input id="${id("vb")}" class="ed" data-bind="${b}vorlage.betreff" value="${esc(tpl.betreff)}"></div>`:""}
+      <div style="display:flex;flex-direction:column;gap:6px"><label class="k" for="${id("vt")}">Eigener Text</label><textarea id="${id("vt")}" class="text" data-bind="${b}vorlage.text" rows="4">${esc(tpl.text)}</textarea>
+      <details class="phd"><summary>Platzhalter</summary><span class="k">${esc(PH_HILFE)}${m.form==="formular"?" In Formularfeldern zusätzlich {Vorlage}.":""}</span></details></div>`;
   return `<div class="kmed">
     <div class="kmg">
       <label class="k" for="${id("n")}">Name</label><input id="${id("n")}" class="ed" data-bind="${b}name" data-rerender value="${esc(m.name)}">
       <label class="k" for="${id("v")}">Vorlauf</label><span><input id="${id("v")}" type="number" min="0" data-bind="${b}vorlauf_tage" data-rerender value="${m.vorlauf_tage??""}"> <span class="k">Tage vor Auftakt · leer = läuft bis zum Termin</span></span>
       <label class="k" for="${id("f")}">Form</label><select id="${id("f")}" data-bind="${b}form" data-rerender>${Object.entries(FORMEN).map(([v,l])=>`<option value="${v}" ${m.form===v?"selected":""}>${l}</option>`).join("")}</select>
-      <label class="k" for="${id("vn")}">Vorlage</label><input id="${id("vn")}" class="ed" data-bind="${b}vorlage.name" data-rerender value="${esc(tpl.name)}" placeholder="Name der Vorlage">
-      ${m.form==="email"?`<label class="k" for="${id("vb")}">Betreff</label><input id="${id("vb")}" class="ed" data-bind="${b}vorlage.betreff" value="${esc(tpl.betreff)}">`:""}
+      <label class="k" for="${id("vs")}">Vorlage</label><select id="${id("vs")}" data-chg="km-vorlage" data-arg="${esc(m.id)}"><option value="">eigener Text</option>${vs.map(v=>`<option value="${esc(v.id)}" ${tpl.geteilt&&tpl.geteilt.id===v.id?"selected":""}>${esc(v.name||"ohne Namen")}</option>`).join("")}</select>
     </div>
     ${ff}
-    <div style="display:flex;flex-direction:column;gap:6px"><label class="k" for="${id("vt")}">Vorlage · Text</label><textarea id="${id("vt")}" class="text" data-bind="${b}vorlage.text" rows="4">${esc(tpl.text)}</textarea>
-      <details class="phd"><summary>Platzhalter</summary><span class="k">Aus der Projekt-Kartei: {Titel} {Untertitel} {Datum} {Zeit} {Ort} {Mitwirkende} {Kurzbeschreibung} {Lange Beschreibung} {Kurzbios} {Absender} {Absender-E-Mail} {Datum kurz} {Treffpunkt}, jedes Feld aus «Weitere Angaben» wie {Kosten} {Anmeldung}${m.form==="formular"?" · in Formularfeldern zusätzlich {Vorlage}":""}</span></details></div>
+    ${tplTeil}
     <div style="display:flex;justify-content:flex-end">${sicher("km|"+m.id,"Massnahme löschen")}</div>
   </div>`;
+}
+
+/* ---- Vorlagen-Kartei (D-027): Text oben, darunter die Kanal-Massnahmen des Trägers mit Haken ---- */
+function vorlageNutzer(vid){return live("kanaele").flatMap(k=>(k.massnahmen||[]).filter(m=>m.vorlage_id===vid).map(m=>k.id+":"+m.id))}
+function karteiV(v){
+  const kms=kmsFor(v.traeger_id),nur=ui.vorlageFilter==="an";
+  const gr=TYPEN.map(t=>{const z=kms.filter(x=>x.k.typ===t&&(!nur||x.m.vorlage_id===v.id));if(!z.length)return"";
+    return `<h3 class="gruppe" style="padding:12px 6px 4px;border:0">${esc(t)}</h3>${z.map(x=>{const on=x.m.vorlage_id===v.id,jetzt=on?"":tplName(x.m);
+      return `<label class="pz vz ${on?"":"aus"}"><input type="checkbox" data-chg="vk" data-arg="${esc(x.key)}" ${on?"checked":""}><span class="kn">${esc(x.k.name)}</span><span>${esc(x.m.name)} <span class="k">${esc(FORMEN[x.m.form]||"")}</span></span><span class="k">${jetzt?"jetzt: "+esc(jetzt):""}</span></label>`}).join("")}`}).join("");
+  const tr=get("traeger",v.traeger_id)||{};
+  return `<div class="kartei">
+  <div class="kopf"><p class="sek">Vorlage</p><span class="links"><button class="lnk m" data-act="dup-v">Duplizieren</button>${sicher("v","Löschen")}<button class="lnk m" data-act="close">Schliessen</button></span></div>
+  <div class="titel">${inp("v:name",v.name,'aria-label="Name der Vorlage" placeholder="Name" data-rerender id="v-name"').replace('class="ed"','class="ed h1"')}</div>
+  <div style="display:flex;flex-direction:column;gap:22px;max-width:980px">
+    <div class="spalte" style="gap:10px">
+      <div class="kkv" style="grid-template-columns:70px minmax(0,1fr)"><label class="k" for="v-betreff">Betreff</label><input id="v-betreff" class="ed" data-bind="v:betreff" value="${esc(v.betreff)}" placeholder="nur für E-Mails"></div>
+      <label class="sr" for="v-text">Text</label><textarea id="v-text" class="text" data-bind="v:text" rows="10">${esc(v.text)}</textarea>
+      <details class="phd"><summary>Platzhalter</summary><span class="k">${esc(PH_HILFE)}</span></details>
+    </div>
+    <div class="spalte" style="gap:0">
+      <div style="display:flex;align-items:baseline;gap:12px"><p class="sek">Verwendet in · ${esc(tr.kuerzel||"")}</p><span style="flex:1"></span>
+        <span role="group" aria-label="Anzeige" style="display:flex;gap:2px"><button class="sub" data-act="vfilter" data-arg="alle" aria-pressed="${!nur}">alle</button><button class="sub" data-act="vfilter" data-arg="an" aria-pressed="${nur}">nur angehakte</button></span></div>
+      <p class="k" style="margin:4px 0 0">Haken = diese Kanal-Massnahme nimmt diese Vorlage. Ein eigener Text der Massnahme bleibt gespeichert und kommt zurück, wenn der Haken weg ist.</p>
+      <div style="display:flex;flex-direction:column">${gr||'<p class="k">Keine Kanal-Massnahmen für diesen Träger.</p>'}</div>
+    </div>
+  </div></div>`;
 }
 
 /* ---- Preset-Kartei ---- */
@@ -736,10 +810,12 @@ function renderEinst(){
         :`<span class="links" style="margin-top:10px"><button class="lnk stark" data-act="sync-verbinden">Verbinden und synchronisieren</button></span>`}`;
   $("#einst").innerHTML=`<div class="dlg"><div style="display:flex;justify-content:space-between;align-items:center"><h2 id="einst-h">Einstellungen</h2><button class="icon" data-act="einst-zu" aria-label="Schliessen">×</button></div>
   <div><p class="sek" style="padding-bottom:8px">Träger und Absender</p><div class="tg"><span class="k">Kürzel</span><span class="k">Name</span><span class="k">Absender</span><span class="k">Absender-E-Mail</span>
-  ${live("traeger").map(t=>`<input class="ed" data-bind="t:${esc(t.id)}:kuerzel" value="${esc(t.kuerzel)}" aria-label="Kürzel ${esc(t.name)}"><input class="ed" data-bind="t:${esc(t.id)}:name" value="${esc(t.name)}" aria-label="Name ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_name" value="${esc(t.absender_name)}" aria-label="Absender ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_email" value="${esc(t.absender_email)}" aria-label="Absender-E-Mail ${esc(t.kuerzel)}">`).join("")||'<span class="k" style="grid-column:1/-1">noch keine</span>'}</div></div>
+  ${live("traeger").map(t=>`<input class="ed" data-bind="t:${esc(t.id)}:kuerzel" value="${esc(t.kuerzel)}" aria-label="Kürzel ${esc(t.name)}"><input class="ed" data-bind="t:${esc(t.id)}:name" value="${esc(t.name)}" aria-label="Name ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_name" value="${esc(t.absender_name)}" aria-label="Absender ${esc(t.kuerzel)}"><input class="ed" data-bind="t:${esc(t.id)}:absender_email" value="${esc(t.absender_email)}" aria-label="Absender-E-Mail ${esc(t.kuerzel)}">`).join("")||'<span class="k" style="grid-column:1/-1">noch keine</span>'}</div>
+  ${live("traeger").map(t=>`<div class="tbes"><label class="k" for="tb-${esc(t.id)}">Beschreibung ${esc(t.kuerzel)} <span class="k">· Platzhalter {Träger-Beschreibung}</span></label><textarea id="tb-${esc(t.id)}" class="text" data-bind="t:${esc(t.id)}:beschreibung" rows="2">${esc(t.beschreibung)}</textarea></div>`).join("")}</div>
   <div><p class="sek" style="padding-bottom:8px">GitHub-Sync</p>${syncTeil}
     <p id="sync-st" class="k${syncState==="error"?" fehler":""}" role="status" style="margin:8px 0 0">${esc(ui.sfMeldung||syncZeile())}</p></div>
   <div><p class="sek" style="padding-bottom:8px">Daten aus v1 übernehmen</p>${migTeil()}</div>
+  ${vorschlagTeil()}
   ${aufrTeil()}
   ${restTeil()}
   <div><p class="sek" style="padding-bottom:8px">Daten</p><p class="k" style="margin:0 0 10px">Lokaler Bestand: ${istTestdaten()?"Testdaten":DB.herkunft==="v1-migration"?"aus v1 übernommen":"eigene Daten"}${syncCfg?", wird synchronisiert":", nur in diesem Browser"}.</p>
@@ -795,7 +871,7 @@ async function migLesen(quelle,holen){
    wandern mit), PUT mit Retry bei SHA-Konflikt, Polling + visibilitychange, offline-first.
    Die alte data.json (schemaVersion 1) wird nie geschrieben (Sperre in ghPut). */
 const KEY_SYNC="komm-v2-sync",KEY_SYNC_OK="komm-v2-sync-erstmals";
-const SYNC_COLL=["traeger","projekte","kanaele","presets","status"];
+const SYNC_COLL=["traeger","projekte","kanaele","presets","status","vorlagen","notizen"];
 const POLL_MS=60000,SYNC_DEBOUNCE_MS=1500,V1_DATEI=/(^|\/)data\.json$/i;
 let syncCfg=null,syncInFlight=false,syncNochmal=false,syncPoll=null,syncDeb=null,syncState="off",syncHint="",syncLast=null,syncRenderPending=false;
 function syncCfgLaden(){try{syncCfg=JSON.parse(localStorage.getItem(KEY_SYNC)||"null")}catch(e){syncCfg=null}}
@@ -828,7 +904,9 @@ function mergeArr(lokal,remote){
 }
 const sigVon=r=>(r.modified||"")+(r.deleted?"|D":"");
 function gleich(a,b){return SYNC_COLL.every(k=>{const A=new Map((a[k]||[]).map(r=>[r.id,sigVon(r)])),B=b[k]||[];return A.size===B.length&&B.every(r=>A.get(r.id)===sigVon(r))})}
-function payloadAus(remote){const p={schemaVersion:2,modified:nowISO(),herkunft:(remote&&remote.herkunft)||DB.herkunft||""};for(const k of SYNC_COLL)p[k]=mergeArr(DB[k],remote?remote[k]:[]);return p}
+function payloadAus(remote){const p={schemaVersion:2,modified:nowISO(),herkunft:(remote&&remote.herkunft)||DB.herkunft||""};
+  if(remote)for(const k of Object.keys(remote))if(Array.isArray(remote[k])&&!SYNC_COLL.includes(k))p[k]=remote[k]; // unbekannte Collections einer neueren Version mitführen
+  for(const k of SYNC_COLL)p[k]=mergeArr(DB[k],remote?remote[k]:[]);return p}
 /* Ergebnis mit dem AKTUELLEN lokalen Stand mergen – Änderungen während des Syncs gehen nicht verloren */
 function syncUebernehmen(p){
   const fin={};for(const k of SYNC_COLL)fin[k]=mergeArr(DB[k],p[k]);
@@ -886,7 +964,7 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 window.addEventListener("online",()=>{if(syncCfg)syncNow()});
 /* Testdaten dürfen nie ins Repo (D-015) */
 const istTestdaten=()=>DB.herkunft==="testdaten"||(!DB.herkunft&&JSON.stringify(DB.kanaele||[]).includes("@example.ch"));
-const leererBestand=herkunft=>({schemaVersion:2,erstellt:nowISO(),herkunft:herkunft||"",traeger:[],projekte:[],kanaele:[],presets:[],status:[]});
+const leererBestand=herkunft=>({schemaVersion:2,erstellt:nowISO(),herkunft:herkunft||"",traeger:[],projekte:[],kanaele:[],presets:[],status:[],vorlagen:[],notizen:[]});
 async function syncVerbinden(){
   const f=ui.sf,st=x=>{ui.sfMeldung=x;renderEinst()};
   const cfg={owner:f.owner.trim(),repo:f.repo.trim(),path:(f.path.trim()||"data-v2.json").replace(/^\/+/,""),token:f.token.trim()};
@@ -917,8 +995,8 @@ function aufrPlan(){
     const ms=k.massnahmen||[],frueh=ms.filter(m=>FRUEH.test(m.name)),rest=ms.filter(m=>!FRUEH.test(m.name));
     let weg=[],ziel=null;
     if(ms.length>=2&&frueh.length){
-      if(rest.length===1){weg=frueh;ziel=rest[0]}
-      else{P.push({k,typ:"selbst",text:rest.length?`${k.name}: ${frueh.length}× «${frueh[0].name}» neben ${rest.length} anderen Massnahmen`:`${k.name}: ${ms.length}× «${frueh[0].name}», keine «spätestens bis»`});}
+      if(rest.length===1&&SPAET.test(rest[0].name)){weg=frueh;ziel=rest[0]}
+      else P.push({k,typ:"selbst",text:`${k.name}: ${ms.map(m=>`«${m.name}» (${m.vorlauf_tage??"läuft"} T)`).join(", ")} – keine eindeutige «spätestens bis»`});
     }
     const neu=TYPNAME2[k.typ],bleibt=ms.filter(m=>!weg.includes(m));
     const um=bleibt.filter(m=>SPAET.test(m.name)&&neu&&!bleibt.some(x=>x!==m&&norm(x.name)===norm(neu)));
@@ -986,7 +1064,7 @@ function migrateV1(d){
   const belegtT=new Set([...L("veranstaltungen").map(v=>v.projekt_id),...L("presets").map(p=>p.projekt_id),...L("kanaele").flatMap(k=>k.projekt_ids||[])]);
   /* Entscheid 18.10.: leere Test-Träger weglassen (leer und «test» im Namen oder Slug) */
   const traeger=L("projekte").filter(p=>belegtT.has(p.id)||!/test/i.test((p.name||"")+" "+(p.slug||""))||(R.traegerWeg.push(p.name||p.slug||"ohne Namen"),false)).map(p=>{let id=norm(p.slug||p.name).replace(/[^a-z0-9]+/g,"")||"t"+p.id;while(tids.has(id))id+="2";tids.add(id);tmap.set(p.id,id);
-    const nm=p.name||"";return{id,name:nm,kuerzel:nm.length<=6?nm:(p.slug||nm).toUpperCase(),absender_name:p.absender_name||"",absender_email:p.absender_email||"",modified:now}});
+    const nm=p.name||"";return{id,name:nm,kuerzel:nm.length<=6?nm:(p.slug||nm).toUpperCase(),absender_name:p.absender_name||"",absender_email:p.absender_email||"",beschreibung:p.beschreibung||"",modified:now}});
   /* Kanäle ← kanaele; Massnahmen ← aufgaben_stufen (+ Stufennamen, die nur in Aufgaben vorkommen) */
   const kontakte=new Map(L("kontakte").map(c=>[c.id,c])),verwendet=new Set(),kmap=new Map(),aufg=L("aufgaben");
   const kanaele=L("kanaele").map(k=>{
@@ -1089,12 +1167,189 @@ function migrateV1(d){
   }
   for(const x of vers)if(!versUsed.has(x.id))R.versaendeOhne.push({titel:x.veranstaltung_titel||"",kanal:x.kanal_name||"",datum:v1Iso(x.versandt_am),betreff:x.betreff||"",text:x.body||""});
   const status=[...stMap.values()];
-  const db={schemaVersion:2,erstellt:now,herkunft:"v1-migration",traeger,projekte,kanaele,presets,status,
+  const db={schemaVersion:2,erstellt:now,herkunft:"v1-migration",traeger,projekte,kanaele,presets,status,vorlagen:[],notizen:[],
     v1_rest:{vorlagen:R.vorlagenOhne,kontakte:R.kontakteOhne,versaende:R.versaendeOhne}};
   const Z={traeger:traeger.length,projekte:projekte.length,kanaele:kanaele.length,massnahmen:kanaele.reduce((n,k)=>n+k.massnahmen.length,0),
     vorlagen:L("vorlagen").length,vorlagenZu:L("vorlagen").length-R.vorlagenOhne.length,kontakte:kontakte.size,kontakteZu:verwendet.size,presets:presets.length,
     erledigt:status.filter(s=>s.status==="erledigt").length,offen:status.filter(s=>s.status==="offen").length,versaende:vers.length,material:assets.length};
   return{db,R,Z};
+}
+
+/* ================= Notizen (P-016): Ort wird automatisch erfasst, man schreibt nur das Was ================= */
+const NZ_ARTEN=["Fehler","Verbesserung","Idee"];
+function teilVon(el){
+  if(!el||!el.closest)return null;
+  if(el.closest("#notizpanel,#notizen,.top"))return null; // Notiz und Kopfzeile ändern den Ort nicht
+  if(el.closest("#einst"))return"Einstellungen";
+  if(el.closest("#side"))return"Liste";
+  if(el.closest("tr.dzeile"))return"Massnahme aufgeklappt";
+  if(el.closest(".amenu"))return"+ Massnahme";
+  if(el.closest(".pmenu"))return"Presets-Menü";
+  if(el.closest(".mass"))return"Massnahmen";
+  if(el.closest(".kmed"))return"Kanal-Massnahme bearbeiten";
+  if(el.closest(".mg"))return"Massnahmen des Kanals";
+  if(el.closest(".kern"))return"Kernzeile";
+  if(el.closest("#main"))return"Kartei";
+  return null;
+}
+document.addEventListener("pointerdown",e=>{const t=teilVon(e.target);if(t)ui.teil=t},true);
+document.addEventListener("focusin",e=>{const t=teilVon(e.target);if(t)ui.teil=t},true);
+function nzOrtJetzt(){
+  const o={bereich:ui.bereich==="projekte"?"Projekte":"Kanäle",ansicht:"",typ:"",id:null,label:"",teil:ui.teil||"",detail:"",detailKey:null};
+  if($("#einst").open){o.bereich="Einstellungen";o.teil="";return o}
+  if(ui.bereich==="projekte"){const p=get("projekte",ui.projekt);if(p){o.typ="projekte";o.id=p.id;o.label=p.titel||"ohne Titel"}
+    if(p&&ui.auf&&/Massnahme|Massnahmen/.test(o.teil)){const r=rowOf(p,ui.auf);if(r){o.detail=r.k.name+" · "+r.m.name;o.detailKey=ui.auf}}}
+  else{o.ansicht={kanaele:"Kanäle",presets:"Presets",vorlagen:"Vorlagen"}[ui.kanalAnsicht];
+    const c={kanaele:"kanaele",presets:"presets",vorlagen:"vorlagen"}[ui.kanalAnsicht],id={kanaele:ui.kanal,presets:ui.preset,vorlagen:ui.vorlage}[ui.kanalAnsicht],r=get(c,id);
+    if(r){o.typ=c;o.id=r.id;o.label=r.name||"ohne Namen"}
+    if(c==="kanaele"&&r&&ui.kmAuf&&/Kanal-Massnahme|Massnahmen des Kanals/.test(o.teil)){const m=(r.massnahmen||[]).find(x=>x.id===ui.kmAuf);if(m){o.detail=m.name;o.detailKey=m.id}}}
+  return o;
+}
+const nzGruppe=o=>!o?"Allgemein":[o.bereich,o.ansicht,o.teil].filter(Boolean).join(" › ");
+const nzPfad=o=>!o?"Allgemein":[o.bereich,o.ansicht,o.label,o.teil,o.detail].filter(Boolean).join(" › ");
+function renderNotizPanel(){
+  const n=ui.notiz,el=$("#notizpanel");
+  if(!n.offen){el.hidden=true;el.innerHTML="";return}
+  el.hidden=false;
+  el.innerHTML=`<div class="nzk"><p class="sek" id="nz-h">Notiz</p><button class="icon" data-act="nz-zu" aria-label="Notiz schliessen">×</button></div>
+    <p class="nzort"><span>${esc(nzPfad(n.ort))}</span> ${n.ort?`<button class="lnk m" data-act="nz-ohneort">ohne Ort</button>`:""}<button class="lnk m" data-act="nz-ort">Ort neu setzen</button></p>
+    <span role="group" aria-label="Art" class="nzart">${NZ_ARTEN.map(a=>`<button class="sub" data-act="nz-art" data-arg="${a}" aria-pressed="${n.art===a}">${a}</button>`).join("")}</span>
+    <label class="sr" for="nz-text">Was ist dir aufgefallen?</label><textarea id="nz-text" class="nzt" rows="4" placeholder="Was ist dir aufgefallen?">${esc(n.text)}</textarea>
+    <div class="nzf"><button class="lnk stark" data-act="nz-speichern">speichern <span class="k">${IS_MAC?"⌘":"Strg+"}↵</span></button><span style="flex:1"></span><button class="lnk m" data-act="nz-liste">Alle Notizen ›</button></div>`;
+}
+function nzOeffnen(){ui.notiz.offen=true;if(!ui.notiz.text)ui.notiz.ort=nzOrtJetzt();renderNotizPanel();const t=$("#nz-text");if(t){t.focus();t.selectionStart=t.value.length}}
+function nzSpeichern(){
+  const n=ui.notiz,t=n.text.trim();if(!t){toast("Notiz ist leer");return}
+  add("notizen",{datum:nowISO(),art:n.art,text:t,ort:n.ort,erledigt:false});
+  ui.notiz={offen:false,art:n.art,text:"",ort:null};renderNotizPanel();toast("Notiz gespeichert");
+  if($("#notizen").open)renderNotizListe();
+}
+const NZ_REIHE=["Projekte","Kanäle","Einstellungen","Allgemein"];
+function nzSortiert(){
+  return live("notizen").filter(x=>ui.notizFilter==="alle"||!x.erledigt).sort((a,b)=>{
+    const ga=nzGruppe(a.ort),gb=nzGruppe(b.ort),ia=NZ_REIHE.indexOf(a.ort?a.ort.bereich:"Allgemein"),ib=NZ_REIHE.indexOf(b.ort?b.ort.bereich:"Allgemein");
+    return ia-ib||ga.localeCompare(gb,"de")||(a.datum||"").localeCompare(b.datum||"")});
+}
+function renderNotizListe(){
+  const xs=nzSortiert();let html="",g=null;
+  for(const x of xs){const gg=nzGruppe(x.ort);if(gg!==g){html+=`${g!==null?"</ul>":""}<h3 class="gruppe nzg">${esc(gg)}</h3><ul class="nzl">`;g=gg}
+    const o=x.ort||{},wo=[o.label,o.detail].filter(Boolean).join(" › ");
+    html+=`<li class="${x.erledigt?"erl":""}"><input type="checkbox" data-chg="nz-erl" data-arg="${esc(x.id)}" ${x.erledigt?"checked":""} aria-label="erledigt"><div><p class="nztx"><span class="nza">${esc(x.art)}</span> ${esc(x.text).replace(/\n/g,"<br>")}</p>
+      <p class="k">${esc(new Date(x.datum).toLocaleDateString("de-CH"))}${wo?` · ${o.id?`<button class="lnk" data-act="nz-gehe" data-arg="${esc(x.id)}">${esc(wo)} ›</button>`:esc(wo)}`:""} · ${sicher("nz|"+x.id,"löschen")}</p></div></li>`}
+  if(g!==null)html+="</ul>";
+  $("#notizen").innerHTML=`<div class="dlg"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Notizen</h2><button class="icon" data-act="nzl-zu" aria-label="Schliessen">×</button></div>
+    <div style="display:flex;gap:14px;align-items:center"><span role="group" aria-label="Anzeige" style="display:flex;gap:2px"><button class="sub" data-act="nz-filter" data-arg="offen" aria-pressed="${ui.notizFilter==="offen"}">offene</button><button class="sub" data-act="nz-filter" data-arg="alle" aria-pressed="${ui.notizFilter==="alle"}">alle</button></span><span style="flex:1"></span><button class="lnk" data-act="nz-kopie">als Text kopieren</button><button class="lnk m" data-act="nz-neu">+ Notiz</button></div>
+    ${html||'<p class="k">Keine Notizen.</p>'}</div>`;
+}
+function nzText(){
+  const xs=nzSortiert();let out=[`# Notizen Kommunikation v2 – ${fmtLang(today())}`],g=null;
+  for(const x of xs){const gg=nzGruppe(x.ort);if(gg!==g){out.push("",`## ${gg}`);g=gg}
+    const o=x.ort||{},wo=[o.label,o.detail].filter(Boolean).join(" › ");
+    out.push(`- [${x.erledigt?"x":" "}] **${x.art}**${wo?` (${wo})`:""}: ${x.text.replace(/\n/g," ")}`)}
+  return out.join("\n");
+}
+function nzGehe(id){
+  const x=get("notizen",id),o=x&&x.ort;if(!o||!o.id)return;
+  $("#notizen").close();
+  if(o.typ==="projekte"){const p=get("projekte",o.id);if(!p)return toast("Projekt gibt es nicht mehr");ui.bereich="projekte";ui.projekt=p.id;ui.traeger=p.traeger_id;
+    if(o.detailKey){ui.massAuf=true;ui.auf=o.detailKey}render();if(o.detailKey){const n=document.querySelector("tr.dzeile");if(n)n.scrollIntoView({block:"center"})}else $("#main").scrollTop=0;return}
+  const r=get(o.typ,o.id);if(!r)return toast("Eintrag gibt es nicht mehr");
+  ui.bereich="kanaele";ui.kanalAnsicht={kanaele:"kanaele",presets:"presets",vorlagen:"vorlagen"}[o.typ];
+  if(o.typ==="kanaele"){ui.kanal=r.id;ui.kmAuf=o.detailKey||null;ui.traeger=(r.traeger_ids||[])[0]||ui.traeger}
+  else if(o.typ==="presets"){ui.preset=r.id;ui.traeger=r.traeger_id}else{ui.vorlage=r.id;ui.traeger=r.traeger_id}
+  render();$("#main").scrollTop=0;
+}
+
+/* ================= Vorlagen-Vorschläge aus v1 (überarbeitet, 18.10.2026) ================= */
+const VORSCHLAEGE=[
+ {name:"Hinweis mit Bitte um Weiterleitung (Sie)",betreff:"Veranstaltungshinweis: {Titel} ({Datum kurz})",text:`Guten Tag
+
+Gerne mache ich Sie auf die folgende Veranstaltung aufmerksam und bitte Sie, den Hinweis an Interessierte weiterzuleiten.
+
+{Kurzbeschreibung}
+
+{Titel}
+{Untertitel}
+{Datum}, {Zeit}
+{Ort}
+Mit {Mitwirkende}
+Dauer: {Dauer}
+Kosten: {Kosten}
+{Wetter}
+Anmeldung: {Anmeldung}
+
+{Träger-Beschreibung}
+
+Den Flyer mit allen Angaben finden Sie im Anhang.
+
+Freundliche Grüsse
+{Absender}`},
+ {name:"Hinweis per Du / an eine Gruppe",betreff:"{Titel}, {Datum kurz}",text:`Hallo {Name}
+
+Hier ein Hinweis auf unsere nächste Veranstaltung – gerne auch zum Weiterreichen an Interessierte.
+
+{Kurzbeschreibung}
+
+{Titel}
+{Untertitel}
+{Datum}, {Zeit}
+{Ort}
+Mit {Mitwirkende}
+Dauer: {Dauer}
+Kosten: {Kosten}
+{Wetter}
+Anmeldung: {Anmeldung}
+
+Flyer mit allen Infos im Anhang.
+
+Herzliche Grüsse
+{Absender}`},
+ {name:"Agenda-Eintrag (kompakt)",betreff:"",text:`{Titel}
+{Untertitel}
+{Datum}, {Zeit}
+{Ort}
+
+{Kurzbeschreibung}
+
+Mit {Mitwirkende}
+Kosten: {Kosten}
+Anmeldung: {Anmeldung}`},
+ {name:"Instagram-Caption",betreff:"",text:`{Titel}
+{Untertitel}
+
+{Kurzbeschreibung}
+
+📅 {Datum}, {Zeit}
+📍 {Ort}
+💸 {Kosten}
+✉️ Anmeldung: {Anmeldung}
+Mit {Mitwirkende}`},
+ {name:"Medienmitteilung",betreff:"Medienmitteilung: {Titel}",text:`MEDIENMITTEILUNG
+
+{Titel}
+{Untertitel}
+{Datum}, {Zeit}, {Ort}
+
+{Lange Beschreibung}
+
+Mitwirkende
+{Kurzbios}
+
+Veranstalter: {Träger}
+Kosten: {Kosten}
+Anmeldung: {Anmeldung}
+
+Für Rückfragen und Bildmaterial:
+{Absender}
+{Absender-E-Mail}`}
+];
+function vorschlagTeil(){
+  const tr=live("traeger");if(!tr.length||DB.herkunft==="testdaten")return"";
+  const tid=ui.vsTraeger&&get("traeger",ui.vsTraeger)?ui.vsTraeger:(tr.find(t=>t.id==="vspw")||tr[0]).id;
+  const da=live("vorlagen").filter(v=>v.traeger_id===tid).map(v=>norm(v.name)),fehlt=VORSCHLAEGE.filter(v=>!da.includes(norm(v.name)));
+  if(!fehlt.length)return"";
+  return `<div><p class="sek" style="padding-bottom:8px">Vorlagen-Vorschläge</p><p class="k" style="margin:0 0 6px">Fünf überarbeitete Vorlagen aus den neun alten (zeilenweise, ohne feste «kostenlos», ohne {{preis}}): ${esc(fehlt.map(v=>v.name).join(" · "))}. Danach unter Kanäle → Vorlagen die Kanal-Massnahmen anhaken.</p>
+    <span class="links"><label class="k" for="vs-tr">für</label><select id="vs-tr" class="tsel" data-chg="vs-tr">${tr.map(t=>`<option value="${esc(t.id)}" ${t.id===tid?"selected":""}>${esc(t.kuerzel)}</option>`).join("")}</select><button class="lnk stark" data-act="vs-anlegen" data-arg="${esc(tid)}">${fehlt.length} Vorlagen anlegen</button></span></div>`;
 }
 
 /* ================= Verlauf: Zurück / Vorwärts (Topbar, wie Feld) =================
@@ -1103,10 +1358,10 @@ function migrateV1(d){
 let navHist=[],navPos=-1;
 const IS_MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent);
 function navSnap(){
-  return{bereich:ui.bereich,kanalAnsicht:ui.kanalAnsicht,traeger:ui.traeger,projekt:ui.projekt,kanal:ui.kanal,preset:ui.preset,
+  return{bereich:ui.bereich,kanalAnsicht:ui.kanalAnsicht,traeger:ui.traeger,projekt:ui.projekt,kanal:ui.kanal,preset:ui.preset,vorlage:ui.vorlage,
     massAuf:ui.massAuf,auf:ui.auf,kmAuf:ui.kmAuf,scroll:$("#main").scrollTop};
 }
-const navOrt=e=>e.bereich==="projekte"?"p:"+e.projekt:e.kanalAnsicht==="kanaele"?"k:"+e.kanal:"pr:"+e.preset;
+const navOrt=e=>e.bereich==="projekte"?"p:"+e.projekt:e.kanalAnsicht==="kanaele"?"k:"+e.kanal:e.kanalAnsicht==="vorlagen"?"v:"+e.vorlage:"pr:"+e.preset;
 function navSave(){if(navHist[navPos]&&navOrt(navHist[navPos])===navOrt(navSnap()))navHist[navPos]=navSnap()}
 function navPush(){
   const sel=navSnap(),cur=navHist[navPos];
@@ -1115,18 +1370,19 @@ function navPush(){
   if(navHist.length>200)navHist.shift();
   navPos=navHist.length-1;navButtons();
 }
-function navGueltig(e){const id=e.bereich==="projekte"?e.projekt:e.kanalAnsicht==="kanaele"?e.kanal:e.preset;
-  const c=e.bereich==="projekte"?"projekte":e.kanalAnsicht==="kanaele"?"kanaele":"presets";return !id||!!get(c,id)}
+function navGueltig(e){const id=e.bereich==="projekte"?e.projekt:e.kanalAnsicht==="kanaele"?e.kanal:e.kanalAnsicht==="vorlagen"?e.vorlage:e.preset;
+  const c=e.bereich==="projekte"?"projekte":e.kanalAnsicht==="kanaele"?"kanaele":e.kanalAnsicht==="vorlagen"?"vorlagen":"presets";return !id||!!get(c,id)}
 function navTarget(d){let p=navPos+d;while(p>=0&&p<navHist.length&&!navGueltig(navHist[p]))p+=d;return p>=0&&p<navHist.length?p:-1}
 function navTitel(e){
   if(e.bereich==="projekte"){const p=get("projekte",e.projekt);return p?(p.titel||"ohne Titel"):"Projekte"}
   if(e.kanalAnsicht==="kanaele"){const k=get("kanaele",e.kanal);return k?(k.name||"ohne Namen"):"Kanäle"}
+  if(e.kanalAnsicht==="vorlagen"){const v=get("vorlagen",e.vorlage);return v?(v.name||"ohne Namen"):"Vorlagen"}
   const pr=get("presets",e.preset);return pr?(pr.name||"ohne Namen"):"Presets";
 }
 function navGo(d){
   const p=navTarget(d);if(p<0)return;
   navSave();navPos=p;const t=navHist[p];
-  Object.assign(ui,{bereich:t.bereich,kanalAnsicht:t.kanalAnsicht,traeger:t.traeger,projekt:t.projekt,kanal:t.kanal,preset:t.preset,
+  Object.assign(ui,{bereich:t.bereich,kanalAnsicht:t.kanalAnsicht,traeger:t.traeger,projekt:t.projekt,kanal:t.kanal,preset:t.preset,vorlage:t.vorlage,
     massAuf:t.massAuf,auf:t.auf,kmAuf:t.kmAuf,menu:false,addMass:false,dEdit:null,sicher:null,importOffen:false});
   if(!get("traeger",ui.traeger))ui.traeger=(live("traeger")[0]||{}).id;
   render();$("#main").scrollTop=t.scroll||0;navButtons();
@@ -1142,7 +1398,7 @@ function navButtons(){
   });
 }
 /* Aktionen, die den Ort wechseln: vorher Zustand des alten Orts sichern, danach neuen Ort eintragen */
-const NAV_ACTS=new Set(["bereich","kansicht","open-p","open-k","open-pr","close","new-p","new-k","new-pr","dup-pr","del","presets-bearbeiten","goto-kanal","goto-row"]);
+const NAV_ACTS=new Set(["bereich","kansicht","open-p","open-k","open-pr","close","new-p","new-k","new-pr","dup-pr","del","presets-bearbeiten","goto-kanal","goto-row","open-v","new-v","dup-v","goto-vorlage","nz-gehe"]);
 
 /* ================= Aktionen ================= */
 function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("an");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("an"),1800)}
@@ -1190,19 +1446,26 @@ const ACT={
   "open-p"(id){if(ui.projekt!==id){ui.projekt=id;ui.auf=null;ui.dEdit=null;ui.addMass=false;ui.sicher=null}render();$("#main").scrollTop=0},
   "open-k"(id){if(ui.kanal!==id){ui.kanal=id;ui.kmAuf=null;ui.importOffen=false;ui.sicher=null}render();$("#main").scrollTop=0},
   "open-pr"(id){ui.preset=id;ui.sicher=null;render();$("#main").scrollTop=0},
-  close(){if(ui.bereich==="projekte")ui.projekt=null;else if(ui.kanalAnsicht==="kanaele")ui.kanal=null;else ui.preset=null;render()},
+  close(){if(ui.bereich==="projekte")ui.projekt=null;else if(ui.kanalAnsicht==="kanaele")ui.kanal=null;else if(ui.kanalAnsicht==="vorlagen")ui.vorlage=null;else ui.preset=null;render()},
+  "open-v"(id){ui.vorlage=id;ui.sicher=null;render();$("#main").scrollTop=0},
+  "new-v"(){const v=add("vorlagen",{traeger_id:ui.traeger,name:"",betreff:"",text:""});ui.vorlage=v.id;render("#v-name")},
+  "dup-v"(){const o=get("vorlagen",ui.vorlage);const v=add("vorlagen",{traeger_id:o.traeger_id,name:o.name+" (Kopie)",betreff:o.betreff,text:o.text});ui.vorlage=v.id;render("#v-name")},
+  "goto-vorlage"(id){const v=get("vorlagen",id);if(!v)return;ui.bereich="kanaele";ui.kanalAnsicht="vorlagen";ui.vorlage=id;ui.traeger=v.traeger_id;render();$("#main").scrollTop=0},
+  vfilter(a){ui.vorlageFilter=a;render()},
   "new-p"(){const p=add("projekte",{traeger_id:ui.traeger,titel:"",untertitel:"",termine:[{datum:"",zusatz:"Auftakt"}],zeiten:[{wert:"",zusatz:""}],orte:[{wert:"",zusatz:""}],mitwirkende:[],felder:STD_FELDER.map(k=>({k,v:""})),kurz:"",lang:"",material:[],presets:[]});ui.projekt=p.id;ui.auf=null;ui.q="";$("#q").value="";render("#p-titel")},
   "new-k"(){const k=add("kanaele",{traeger_ids:[ui.traeger],name:"",typ:"Agenda & Newsletter",link:"",kontakte:[],notiz:"",felder:[],massnahmen:[]});ui.kanal=k.id;render("#k-name")},
   "new-pr"(){const p=add("presets",{traeger_id:ui.traeger,name:"",beschreibung:"",kanal_massnahmen:[]});ui.preset=p.id;render("#pr-name")},
   "dup-pr"(){const o=get("presets",ui.preset);const p=add("presets",{traeger_id:o.traeger_id,name:o.name+" (Kopie)",beschreibung:o.beschreibung,kanal_massnahmen:[...o.kanal_massnahmen]});ui.preset=p.id;render("#pr-name")},
   del(a){
-    if(ui.sicher!==a){ui.sicher=a;if(a==="reset")renderEinst();else render();return}
+    if(ui.sicher!==a){ui.sicher=a;if(a==="reset")renderEinst();else if(a.startsWith("nz|"))renderNotizListe();else render();return}
     ui.sicher=null;
+    if(a.startsWith("nz|")){const x=get("notizen",a.slice(3));if(x)tomb(x);renderNotizListe();return}
     if(a==="p"){tomb(get("projekte",ui.projekt));ui.projekt=null}
     else if(a==="k"){tomb(get("kanaele",ui.kanal));ui.kanal=null}
     else if(a==="pr"){tomb(get("presets",ui.preset));ui.preset=null}
+    else if(a==="v"){const id=ui.vorlage;for(const k of live("kanaele")){let t=false;for(const m of k.massnahmen||[])if(m.vorlage_id===id){m.vorlage_id=null;t=true}if(t)touch(k)}tomb(get("vorlagen",id));ui.vorlage=null}
     else if(a.startsWith("km|")){const k=get("kanaele",ui.kanal);k.massnahmen=k.massnahmen.filter(m=>m.id!==a.slice(3));touch(k);ui.kmAuf=null}
-    else if(a==="reset"){DB=seed();saveNow();ui.projekt=null;ui.kanal=null;ui.preset=null;renderEinst();render();toast("Testdaten geladen");return}
+    else if(a==="reset"){DB=seed();dbVollstaendig();saveNow();ui.projekt=null;ui.kanal=null;ui.preset=null;renderEinst();render();toast("Testdaten geladen");return}
     render();
   },
   "add-entry"(f){
@@ -1252,6 +1515,21 @@ const ACT={
   "einst-zu"(){$("#einst").close()},
   export(){const b=new Blob([JSON.stringify(DB,null,1)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`kommunikation-v2-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)},
   import(){$("#importfile").click()},
+  notiz(){if(ui.notiz.offen){ui.notiz.offen=false;renderNotizPanel();return}nzOeffnen()},
+  "nz-zu"(){ui.notiz.offen=false;renderNotizPanel()},
+  "nz-art"(a){ui.notiz.art=a;renderNotizPanel();$("#nz-text").focus()},
+  "nz-ort"(){ui.notiz.ort=nzOrtJetzt();renderNotizPanel();$("#nz-text").focus()},
+  "nz-ohneort"(){ui.notiz.ort=null;renderNotizPanel();$("#nz-text").focus()},
+  "nz-speichern"(){nzSpeichern()},
+  "nz-liste"(){ui.notiz.offen=false;renderNotizPanel();renderNotizListe();$("#notizen").showModal()},
+  "nzl-zu"(){$("#notizen").close()},
+  "nz-filter"(a){ui.notizFilter=a;renderNotizListe()},
+  "nz-kopie"(){copy(nzText())},
+  "nz-neu"(){$("#notizen").close();nzOeffnen()},
+  "nz-gehe"(id){nzGehe(id)},
+  "vs-anlegen"(tid){const da=live("vorlagen").filter(v=>v.traeger_id===tid).map(v=>norm(v.name));let n=0;
+    for(const v of VORSCHLAEGE)if(!da.includes(norm(v.name))){add("vorlagen",{traeger_id:tid,name:v.name,betreff:v.betreff,text:v.text});n++}
+    $("#einst").close();ui.bereich="kanaele";ui.kanalAnsicht="vorlagen";ui.traeger=tid;ui.vorlage=(live("vorlagen").find(v=>v.traeger_id===tid&&v.name===VORSCHLAEGE[0].name)||{}).id||null;render();navPush();toast(`${n} Vorlagen angelegt – jetzt Kanal-Massnahmen anhaken`)},
   "aufr-ok"(){const n=aufrAusfuehren();ui.kmAuf=null;render();renderEinst();toast(`${n} ${n===1?"Kanal":"Kanäle"} aufgeräumt`)},
   "sync-dot"(){if(syncCfg)syncNow();else ACT.einst()},
   "sync-verbinden"(){syncVerbinden()},
@@ -1264,7 +1542,7 @@ const ACT={
     migLesen(`Repo ${cfg.owner}/${cfg.repo} · data.json`,async()=>{const r=await ghGet(cfg,"data.json");if(!r.data)throw new Error("data.json im Repo nicht gefunden.");return r.data})},
   "mig-datei"(){$("#v1file").click()},
   "mig-weg"(){ui.mig=null;renderEinst()},
-  "mig-ok"(){if(syncCfg||!ui.mig||!ui.mig.res)return;DB=ui.mig.res.db;saveNow();ui.mig=null;
+  "mig-ok"(){if(syncCfg||!ui.mig||!ui.mig.res)return;DB=ui.mig.res.db;dbVollstaendig();saveNow();ui.mig=null;
     ui.projekt=ui.kanal=ui.preset=ui.auf=ui.kmAuf=null;ui.traeger=(live("traeger")[0]||{}).id;navHist=[];navPos=-1;render();navPush();renderEinst();toast("Daten aus v1 übernommen")},
   "mig-kopie"(a){const R=ui.mig&&ui.mig.res&&ui.mig.res.R;copy(a.startsWith("rest-")?kopieText(a.slice(5),DB.v1_rest):kopieText(a,{vorlagen:R.vorlagenOhne,kontakte:R.kontakteOhne,versaende:R.versaendeOhne}))}
 };
@@ -1272,6 +1550,10 @@ const CHG={
   traeger(v){ui.traeger=v;ui.auf=null;ui.menu=false;if(ui.bereich==="projekte"){const p=get("projekte",ui.projekt);if(p&&p.traeger_id!==v)ui.projekt=null}render("#tsel")},
   "preset-toggle"(id,el){const p=get("projekte",ui.projekt);p.presets=(p.presets||[]).filter(x=>x!==id);if(el.checked)p.presets.push(id);touch(p);render()},
   pk(key,el){const pr=get("presets",ui.preset);pr.kanal_massnahmen=pr.kanal_massnahmen.filter(x=>x!==key);if(el.checked)pr.kanal_massnahmen.push(key);touch(pr);render()},
+  "nz-erl"(id,el){const x=get("notizen",id);if(x){x.erledigt=el.checked;touch(x);renderNotizListe()}},
+  "vs-tr"(a,el){ui.vsTraeger=el.value;renderEinst()},
+  vk(key,el){const km=kmByKey(key),v=get("vorlagen",ui.vorlage);if(!km||!v)return;km.m.vorlage_id=el.checked?v.id:null;touch(km.k);render()},
+  "km-vorlage"(mid,el){const k=get("kanaele",ui.kanal),m=k&&(k.massnahmen||[]).find(x=>x.id===mid);if(!m)return;m.vorlage_id=el.value||null;touch(k);render()},
   kt(tid,el){const k=get("kanaele",ui.kanal);k.traeger_ids=(k.traeger_ids||[]).filter(x=>x!==tid);if(el.checked)k.traeger_ids.push(tid);touch(k);render()},
   anhang(a,el){const i=a.indexOf("|"),key=a.slice(0,i),name=a.slice(i+1),p=get("projekte",ui.projekt),r=rowOf(p,key),st=ensureStatus(p,key);let l=versand(p,r).anhaenge.filter(x=>x!==name);if(el.checked)l.push(name);st.versand=Object.assign({},st.versand,{anhaenge:l});touch(st);render()},
   check(a,el){const i=a.lastIndexOf("|"),key=a.slice(0,i),n=a.slice(i+1),st=ensureStatus(get("projekte",ui.projekt),key);st.checkliste=Object.assign({},st.checkliste,{[n]:el.checked});touch(st);render()}
@@ -1297,6 +1579,7 @@ let dirty=false;
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.id==="q"){ui.q=t.value;renderSide();return}
+  if(t.id==="nz-text"){ui.notiz.text=t.value;return}
   if(t.classList.contains("sfi")){ui.sf[t.id.slice(3)]=t.value;if(ui.sfMeldung){ui.sfMeldung="";const st=$("#sync-st");if(st)st.textContent=syncZeile()}return}
   if(t.id==="addq"){ui.addQ=t.value;ui.addSel=0;addListeNeu();return}
   if(!t.dataset.bind||t.tagName==="SELECT")return;
@@ -1324,6 +1607,7 @@ function bindSet(spec,val,el){
   if(scope==="p"){rec=obj=get("projekte",ui.projekt);path=parts[1]}
   else if(scope==="k"){rec=obj=get("kanaele",ui.kanal);path=parts[1]}
   else if(scope==="pr"){rec=obj=get("presets",ui.preset);path=parts[1]}
+  else if(scope==="v"){rec=obj=get("vorlagen",ui.vorlage);path=parts[1]}
   else if(scope==="t"){rec=obj=get("traeger",parts[1]);path=parts[2]}
   else if(scope==="km"){rec=get("kanaele",ui.kanal);obj=rec&&rec.massnahmen.find(m=>m.id===parts[1]);path=parts[2]}
   else if(scope==="st"){const p=get("projekte",ui.projekt);path=parts.pop();const key=parts.slice(1).join(":");rec=obj=ensureStatus(p,key)}
@@ -1335,13 +1619,17 @@ $("#importfile").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
   try{const d=JSON.parse(await f.text());
     if(d.schemaVersion!==2||!["traeger","projekte","kanaele","presets","status"].every(k=>Array.isArray(d[k])))throw new Error("Format");
-    DB=d;saveNow();ui.projekt=ui.kanal=ui.preset=null;render();renderEinst();toast("Daten geladen")}
+    DB=d;dbVollstaendig();saveNow();ui.projekt=ui.kanal=ui.preset=ui.vorlage=null;render();renderEinst();toast("Daten geladen")}
   catch(x){toast("Datei nicht lesbar (erwartet schemaVersion 2; v1-Daten über «Daten aus v1 übernehmen»)")}
   e.target.value="";
 });
 $("#v1file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)migLesen("Datei "+f.name,async()=>JSON.parse(await f.text()))});
 document.addEventListener("keydown",e=>{
   const tag=document.activeElement.tagName;
+  if(ui.notiz.offen&&e.target.closest&&e.target.closest("#notizpanel")){
+    if(e.key==="Escape"){e.preventDefault();ui.notiz.offen=false;renderNotizPanel();$("#nzbtn").focus();return}
+    if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();nzSpeichern();$("#nzbtn").focus();return}
+  }
   if(e.target.id==="addq"){
     const n=document.querySelectorAll("#am-l .am-o").length;
     if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(!n)return;ui.addSel=(ui.addSel+(e.key==="ArrowDown"?1:-1)+n)%n;addListeNeu();return}
@@ -1361,7 +1649,8 @@ document.addEventListener("keydown",e=>{
     e.preventDefault();if(document.activeElement&&tippt)document.activeElement.blur();navGo(e.key==="["||e.key==="ArrowLeft"?-1:1);return}
   if(e.key==="/"&&!["INPUT","TEXTAREA","SELECT"].includes(tag)){e.preventDefault();$("#q").focus();return}
   if(e.key==="Escape"){
-    if($("#einst").open)return;
+    if($("#einst").open||$("#notizen").open)return;
+    if(ui.notiz.offen){ui.notiz.offen=false;renderNotizPanel();return}
     if(ui.menu){ui.menu=false;render('[data-act="menu"]');return}
     if(document.activeElement.id==="q"&&ui.q){ui.q="";$("#q").value="";renderSide();return}
     if(ui.auf&&!["INPUT","TEXTAREA"].includes(tag)){const k=ui.auf;ui.auf=null;render(`[data-act="auf"][data-arg="${CSS.escape(k)}"]`)}
@@ -1455,11 +1744,13 @@ function seed(){
     S("soft","proz:m1","erledigt","2026-08-20"),S("soft","web:m1","erledigt","2026-08-10"),S("soft","mitgl:m1","erledigt","2026-08-22"),
     S("lesekreis","mitgl:m1","erledigt","2026-08-05"),S("lesekreis","mitgl:m2","erledigt","2026-08-22")
   ];
-  return{schemaVersion:2,erstellt:nowISO(),herkunft:"testdaten",traeger:[T("vspw","Verein für Spaziergangswissenschaft","VSPW"),T("spaz","spaz Verlag","spaz"),T("ljvw","LJVW","LJVW")],projekte,kanaele,presets,status};
+  const vorlagen=[{id:"v-mm",traeger_id:"vspw",name:"Medienmitteilung (geteilt)",betreff:"Medienmitteilung: {Titel}",text:mm,modified:nowISO()}];
+  for(const k of kanaele)if(k.id==="bz"||k.id==="baz")k.massnahmen[0].vorlage_id="v-mm";
+  return{schemaVersion:2,erstellt:nowISO(),herkunft:"testdaten",vorlagen,notizen:[],traeger:[T("vspw","Verein für Spaziergangswissenschaft","VSPW"),T("spaz","spaz Verlag","spaz"),T("ljvw","LJVW","LJVW")],projekte,kanaele,presets,status};
 }
 
 /* ================= Start ================= */
-DB=load()||seed();saveNow();loadUI();
+DB=load()||seed();dbVollstaendig();saveNow();loadUI();
 if(!get("traeger",ui.traeger))ui.traeger=(live("traeger")[0]||{}).id;
 syncCfgLaden();syncStatus(syncCfg?"synced":"off");
 render();navPush();
