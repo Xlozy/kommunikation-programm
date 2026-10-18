@@ -119,7 +119,15 @@ input.untert{font-size:14px;color:var(--text2)}
 .block{display:flex;flex-direction:column}
 .kv{display:grid;grid-template-columns:112px minmax(0,1fr) 22px 20px;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:14px}
 .kv .kk{font-size:13px;color:var(--muted)}
-.mat{display:grid;grid-template-columns:40px minmax(0,1fr) 90px 20px;gap:12px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mat{display:grid;grid-template-columns:40px minmax(0,1fr) 100px 18px 20px;gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:14px}
+.mat .thumb{width:40px;height:28px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:4px}
+.mat .thumb [hidden]{display:none}
+.mat .thumb img{width:40px;height:28px;object-fit:cover;border-radius:4px;border:1px solid var(--line2)}
+.mat .mn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mat .mlink{color:var(--text);font-size:14px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.mat .mlink:hover{color:var(--accent-hi)}
+.mat.weg .mlink{color:var(--muted)}
+.mat:hover .rm{opacity:1}
 .typ{width:40px;height:28px;border-radius:4px;background:var(--line);border:1px solid var(--line2);font-size:10px;color:var(--muted);display:flex;align-items:center;justify-content:center}
 .thead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding-bottom:6px}
 textarea.text{width:100%;font-size:14px;line-height:1.6;color:var(--text2);padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--field);resize:vertical;min-height:64px;overflow:hidden}
@@ -323,6 +331,7 @@ dialog::backdrop{background:rgba(0,0,0,.55)}
 <div id="notizpanel" role="dialog" aria-labelledby="nz-h" hidden></div>
 <input type="file" id="importfile" accept="application/json,.json" hidden>
 <input type="file" id="v1file" accept="application/json,.json" hidden>
+<input type="file" id="matfile" multiple hidden>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -375,7 +384,7 @@ const ui={bereich:"projekte",traeger:"vspw",projekt:null,kanal:null,preset:null,
   vergangene:false,dEdit:null,massAuf:false,sort:{k:"bis",dir:1},auf:null,menu:false,addMass:false,kmAuf:null,
   presetFilter:"alle",importOffen:false,sicher:null,addQ:"",addSel:0,
   sf:{owner:"",repo:"kommunikation-data",path:"data-v2.json",token:""},sfMeldung:"",syncSchritt:null,mig:null,
-  vorlage:null,vorlageFilter:"alle",notiz:{offen:false,art:"Verbesserung",text:"",ort:null},notizFilter:"offen",teil:""};
+  vorlage:null,vorlageFilter:"alle",notiz:{offen:false,art:"Verbesserung",text:"",ort:null},notizFilter:"offen",teil:"",medMonate:12,medAlt:null};
 const UI_KEEP=["bereich","traeger","projekt","kanal","preset","vorlage","kanalAnsicht","massAuf","sort","presetFilter"];
 function loadUI(){try{const s=JSON.parse(localStorage.getItem(KEY_UI)||"{}");for(const k of UI_KEEP)if(k in s)ui[k]=s[k]}catch(e){}}
 function saveUI(){try{const o={};for(const k of UI_KEEP)o[k]=ui[k];localStorage.setItem(KEY_UI,JSON.stringify(o))}catch(e){}}
@@ -532,6 +541,7 @@ function renderMain(){
   else{const p=get("presets",ui.preset);m.innerHTML=p?karteiPr(p):leer("Kein Preset ausgewählt.")}
   m.style.minHeight=m.scrollHeight+"px";grow();m.style.minHeight=""; // grow() lässt Textfelder kurz schrumpfen – sonst springt die Ansicht hoch
   m.scrollTop=sTop;if(window.scrollY!==wTop)window.scrollTo(0,wTop);
+  if(ui.bereich==="projekte"&&typeof mediaCfg==="function"&&mediaCfg()){const p=get("projekte",ui.projekt);if(p){medienAbgleich(p);medienVorschau()}}
 }
 const leer=t=>`<div class="kartei"><p class="sek">Kartei</p><p style="color:var(--muted);margin:60px auto 0">${t}</p></div>`;
 const cp=(spec,label)=>`<button class="copy" data-act="copy" data-arg="${esc(spec)}" aria-label="${esc(label)} kopieren">${COPYICON}</button>`;
@@ -550,7 +560,7 @@ function karteiP(p){
       <button class="mehr" data-act="add-entry" data-arg="${f}">+ ${plus}</button></div>`).join("");
 
   const weitere=(p.felder||[]).map((f,i)=>`<div class="kv"><input class="ed kk" data-bind="p:felder.${i}.k" value="${esc(f.k)}" placeholder="Feld" aria-label="Feldname ${i+1}"><input class="ed" data-bind="p:felder.${i}.v" value="${esc(f.v)}" aria-label="${esc(f.k||"Feld "+(i+1))}">${cp("feld|"+i,f.k||"Feld")}${rmB("felder|"+i,f.k||"Feld")}</div>`).join("");
-  const material=(p.material||[]).map((m,i)=>{const ext=(m.name.split(".").pop()||"").toUpperCase().slice(0,4);return `<div class="mat"><span class="typ" aria-hidden="true">${esc(m.name.includes(".")?ext:"–")}</span><input class="ed" data-bind="p:material.${i}.name" value="${esc(m.name)}" placeholder="Dateiname" aria-label="Material ${i+1}"><input class="ed k" data-bind="p:material.${i}.info" value="${esc(m.info)}" placeholder="Info" aria-label="Info zu Material ${i+1}">${rmB("material|"+i,"Material "+(i+1))}</div>`}).join("");
+  const material=materialHTML(p);
   const mw=(p.mitwirkende||[]).map((m,i)=>m.name?`<div class="bio"><div class="bh"><label for="bio-${i}">${esc(m.name)}</label>${cp("bio|"+i,"Bio "+m.name)}</div><textarea id="bio-${i}" class="text" data-bind="p:mitwirkende.${i}.bio" rows="2" placeholder="Kurzbio, 2–3 Sätze">${esc(m.bio)}</textarea></div>`:"").join("");
 
   return `<div class="kartei">
@@ -560,7 +570,7 @@ function karteiP(p){
   <div class="zwei">
     <div class="spalte">
       <div class="block"><p class="sek" style="padding-bottom:6px">Weitere Angaben</p>${weitere}<button class="mehr" style="padding-top:8px" data-act="add-entry" data-arg="felder">+ Feld</button></div>
-      <div class="block"><p class="sek" style="padding-bottom:4px">Material</p>${material}<button class="mehr" style="padding-top:8px" data-act="add-entry" data-arg="material">+ Datei</button><p class="hinweis">Vorerst nur Dateinamen; Ablage im Media-Repo folgt mit dem Sync.</p></div>
+      <div class="block"><p class="sek" style="padding-bottom:4px">Material</p>${material}</div>
     </div>
     <div class="spalte" style="gap:14px">
       ${textBlock("kurz","Kurzbeschreibung",p.kurz)}
@@ -691,7 +701,7 @@ function detailHTML(p,r){
       <span class="k">Vorlage</span><span>${vorlageWahl(r)}</span>
       <label class="k" for="vb-${esc(key)}">Betreff</label><input id="vb-${esc(key)}" class="ed" data-bind="${esc(b)}versand.betreff" value="${esc(v.betreff)}"></div>
       <label class="sr" for="vt-${esc(key)}">Text</label><textarea id="vt-${esc(key)}" class="text" data-bind="${esc(b)}versand.text" rows="6">${esc(v.text)}</textarea>`;
-    R=`<div><span class="k">Anhänge</span>${mat.length?mat.map(m=>`<label class="chk ${v.anhaenge.includes(m.name)?"":"aus"}"><input type="checkbox" data-chg="anhang" data-arg="${esc(key+"|"+m.name)}" ${v.anhaenge.includes(m.name)?"checked":""}> ${esc(m.name)}</label>`).join(""):'<span class="k">kein Material</span>'}</div>
+    R=`<div><span class="k">Anhänge</span>${mat.length?mat.map(m=>`<label class="chk ${v.anhaenge.includes(m.name)?"":"aus"}"><input type="checkbox" data-chg="anhang" data-arg="${esc(key+"|"+m.name)}" ${v.anhaenge.includes(m.name)?"checked":""}> ${esc(m.name)}${m.pfad&&mediaCfg()?` <button class="lnk m" data-act="mat-laden" data-arg="${p.material.indexOf(m)}" aria-label="${esc(m.name)} herunterladen" title="herunterladen">↓</button>`:""}</label>`).join(""):'<span class="k">kein Material</span>'}</div>
       <div>${em.length>1?`<button class="lnk" data-act="copy" data-arg="${esc("vb|"+key)}">BCC-Liste kopieren</button>`:""}<button class="lnk" data-act="copy" data-arg="${esc("vt|"+key)}">Text kopieren</button><button class="lnk" data-act="mail" data-arg="${esc(key)}">In Mail öffnen</button></div>`;
   }else if(r.m.form==="formular"){
     const ff=formFelder(p,r);
@@ -839,6 +849,7 @@ function renderEinst(){
   ${live("traeger").map(t=>`<div class="tbes"><label class="k" for="tb-${esc(t.id)}">Beschreibung ${esc(t.kuerzel)} <span class="k">· Platzhalter {Träger-Beschreibung}</span></label><textarea id="tb-${esc(t.id)}" class="text" data-bind="t:${esc(t.id)}:beschreibung" rows="2">${esc(t.beschreibung)}</textarea></div>`).join("")}</div>
   <div><p class="sek" style="padding-bottom:8px">GitHub-Sync</p>${syncTeil}
     <p id="sync-st" class="k${syncState==="error"?" fehler":""}" role="status" style="margin:8px 0 0">${esc(ui.sfMeldung||syncZeile())}</p></div>
+  ${medienTeil()}
   ${uebergangTeil()}
   <div><p class="sek" style="padding-bottom:8px">Daten</p><p class="k" style="margin:0 0 10px">${istTestdaten()?"In diesem Browser sind nur Testdaten.":syncCfg?"Die Daten liegen in diesem Browser und werden laufend mit GitHub abgeglichen. «Als JSON sichern» lädt eine Kopie als Datei herunter.":"Die Daten liegen nur in diesem Browser (kein Sync). «Als JSON sichern» lädt eine Kopie als Datei herunter."}</p>
   <span class="links"><button class="lnk" data-act="export">Als JSON sichern</button><button class="lnk" data-act="import">JSON laden …</button>${syncCfg?"":sicher("reset","Testdaten neu laden","Alle Daten ersetzen?")}</span></div></div>`;
@@ -1227,6 +1238,128 @@ function migrateV1(d){
   return{db,R,Z};
 }
 
+/* ================= Medien (P-020): Repo kommunikation-media, Schema <träger>/<jahr>/<projekt>/<datei> wie v1 ================= */
+const mediaCfg=()=>syncCfg?{owner:syncCfg.owner,token:syncCfg.token,repo:syncCfg.mediaRepo||"kommunikation-media"}:null;
+const MEDIA_LIST=new Map(),MEDIA_URL=new Map(),MEDIA_BUSY=new Set();
+const BILD=/\.(jpe?g|png|webp|gif)$/i;
+const fmtGroesse=b=>!b?"":b<1e6?Math.max(1,Math.round(b/1e3))+" KB":(b/1e6).toFixed(1).replace(".0","")+" MB";
+function projektOrdner(p){const a=auftakt(p),j=a?a.slice(0,4):String(new Date().getFullYear()),key=/^v\d+$/.test(p.id)?p.id.slice(1):p.id;return `${p.traeger_id}/${j}/${key}`}
+function ordnerVon(p){const s=new Set([projektOrdner(p)]);for(const m of p.material||[])if(m.pfad)s.add(m.pfad.slice(0,m.pfad.lastIndexOf("/")));return[...s]}
+async function ghListe(c,dir){
+  const r=await fetch(ghUrl({owner:c.owner,repo:c.repo},dir),{headers:ghHead(c),cache:"no-store"});
+  if(r.status===404)return[];if(!r.ok)throw await ghFehler(r,"GET");
+  const j=await r.json();return Array.isArray(j)?j.filter(x=>x.type==="file"):[];
+}
+async function ghBlob(c,path){
+  const r=await fetch(ghUrl({owner:c.owner,repo:c.repo},path),{headers:Object.assign(ghHead(c),{Accept:"application/vnd.github.raw+json"}),cache:"no-store"});
+  if(!r.ok)throw await ghFehler(r,"GET");return r.blob();
+}
+async function ghPutDatei(c,path,b64,sha,msg){
+  const body={message:msg||`Datei ${path}`,content:b64};if(sha)body.sha=sha;
+  const r=await fetch(ghUrl({owner:c.owner,repo:c.repo},path),{method:"PUT",headers:Object.assign(ghHead(c),{"Content-Type":"application/json"}),body:JSON.stringify(body)});
+  if(!r.ok)throw await ghFehler(r,"PUT");return(await r.json()).content;
+}
+async function ghDelete(c,path,sha){
+  const r=await fetch(ghUrl({owner:c.owner,repo:c.repo},path),{method:"DELETE",headers:Object.assign(ghHead(c),{"Content-Type":"application/json"}),body:JSON.stringify({message:`Entfernt ${path}`,sha})});
+  if(!r.ok&&r.status!==404)throw await ghFehler(r,"DELETE");
+}
+/* Ordner eines Projekts lesen und mit dem Material abgleichen (Dateien im Repo, die fehlen, werden ergänzt) */
+async function medienAbgleich(p,erzwingen){
+  const c=mediaCfg();if(!c||!p)return;
+  if(MEDIA_BUSY.has(p.id)||(!erzwingen&&MEDIA_LIST.has(p.id)))return;
+  MEDIA_BUSY.add(p.id);
+  try{
+    const dateien=[];for(const d of ordnerVon(p))dateien.push(...await ghListe(c,d));
+    MEDIA_LIST.set(p.id,{ok:true,dateien});
+    let geaendert=false;const mat=p.material=p.material||[];
+    for(const f of dateien){
+      const m=mat.find(x=>x.pfad===f.path)||mat.find(x=>!x.pfad&&x.name===f.name);
+      if(m){if(m.pfad!==f.path||m.groesse!==f.size){m.pfad=f.path;m.groesse=f.size;geaendert=true}}
+      else{mat.push({name:f.name,info:"",pfad:f.path,groesse:f.size});geaendert=true}
+    }
+    if(geaendert)touch(p);
+  }catch(e){MEDIA_LIST.set(p.id,{ok:false,fehler:syncFehlerText(e)})}
+  MEDIA_BUSY.delete(p.id);
+  if(ui.projekt===p.id)renderNachSync();
+}
+const imRepo=(p,m)=>{const l=MEDIA_LIST.get(p.id);return !!m.pfad&&(!l||!l.ok||l.dateien.some(f=>f.path===m.pfad))};
+async function medienUrl(path){
+  if(MEDIA_URL.has(path))return MEDIA_URL.get(path);
+  const pr=ghBlob(mediaCfg(),path).then(b=>URL.createObjectURL(b));MEDIA_URL.set(path,pr);
+  try{return await pr}catch(e){MEDIA_URL.delete(path);throw e}
+}
+/* Vorschaubilder nach dem Zeichnen nachladen, ohne neu zu zeichnen */
+function medienVorschau(){
+  if(!mediaCfg())return;
+  document.querySelectorAll("img[data-thumb]").forEach(async img=>{
+    if(img.dataset.geladen)return;img.dataset.geladen="1";
+    try{img.src=await medienUrl(img.dataset.thumb);img.hidden=false;const t=img.nextElementSibling;if(t)t.hidden=true}catch(e){}
+  });
+}
+async function medienLaden(path,name,oeffnen){
+  try{toast("lade …");const u=await medienUrl(path);const a=document.createElement("a");a.href=u;if(oeffnen)a.target="_blank";else a.download=name;document.body.appendChild(a);a.click();a.remove()}
+  catch(e){toast("Laden fehlgeschlagen: "+syncFehlerText(e))}
+}
+function dateiB64(f){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]);r.onerror=no;r.readAsDataURL(f)})}
+function bildFormat(f){return new Promise(ok=>{if(!/^image\//.test(f.type))return ok("");const u=URL.createObjectURL(f),i=new Image();
+  i.onload=()=>{const q=i.naturalWidth/i.naturalHeight;ok(q>1.15?"Bild quer":q<0.87?"Bild hoch":"Bild quadratisch");URL.revokeObjectURL(u)};i.onerror=()=>ok("");i.src=u})} // D-012
+async function medienHochladen(p,files){
+  const c=mediaCfg();if(!c)return;const dir=projektOrdner(p);let n=0;
+  for(const f of files){
+    if(f.size>50e6){toast(`${f.name}: grösser als 50 MB – nicht hochgeladen`);continue}
+    let name=f.name,i=2;const da=new Set((p.material||[]).map(m=>m.pfad).filter(Boolean));
+    while(da.has(dir+"/"+name))name=f.name.replace(/(\.[^.]*)?$/,` (${i++})$1`);
+    try{toast(`lade ${name} hoch …`);const b64=await dateiB64(f),info=await bildFormat(f);
+      const res=await ghPutDatei(c,dir+"/"+name,b64,null,`Material ${p.titel||p.id}: ${name}`);
+      (p.material=p.material||[]).push({name,info,pfad:res.path,groesse:f.size});touch(p);MEDIA_URL.set(res.path,Promise.resolve(URL.createObjectURL(f)));n++;
+    }catch(e){toast(`${name}: ${syncFehlerText(e)}`)}
+  }
+  const l=MEDIA_LIST.get(p.id);if(l&&l.ok)MEDIA_LIST.delete(p.id);
+  render();if(n)toast(`${n} ${n===1?"Datei":"Dateien"} hochgeladen`);
+}
+async function medienEntfernen(p,i){
+  const m=(p.material||[])[i];if(!m)return;
+  if(m.pfad&&mediaCfg()){
+    try{const l=await ghListe(mediaCfg(),m.pfad.slice(0,m.pfad.lastIndexOf("/"))),f=l.find(x=>x.path===m.pfad);if(f)await ghDelete(mediaCfg(),m.pfad,f.sha)}
+    catch(e){toast("Löschen im Repo fehlgeschlagen: "+syncFehlerText(e));return}
+    MEDIA_URL.delete(m.pfad);
+  }
+  p.material.splice(i,1);touch(p);MEDIA_LIST.delete(p.id);render();toast(m.pfad?"aus Material und Repo entfernt":"entfernt");
+}
+function materialHTML(p){
+  const c=mediaCfg(),l=MEDIA_LIST.get(p.id);
+  const zeilen=(p.material||[]).map((m,i)=>{
+    const ext=(m.name.split(".").pop()||"").toUpperCase().slice(0,4),typ=`<span class="typ" aria-hidden="true">${esc(m.name.includes(".")?ext:"–")}</span>`;
+    if(m.pfad&&c){const da=imRepo(p,m),warn=ui.sicher==="mat|"+i;
+      return `<div class="mat repo ${da?"":"weg"}"><span class="thumb">${da&&BILD.test(m.name)?`<img data-thumb="${esc(m.pfad)}" alt="" hidden>`:""}${typ}</span>
+        <span class="mn"><button class="lnk mlink" data-act="mat-oeffnen" data-arg="${i}" title="öffnen">${esc(m.name)}</button>${da?"":' <span class="k">– nicht mehr im Repo</span>'}</span>
+        <span class="k mi"><input class="ed k" data-bind="p:material.${i}.info" value="${esc(m.info)}" placeholder="${esc(fmtGroesse(m.groesse)||"Info")}" aria-label="Info zu ${esc(m.name)}"></span>
+        ${da?`<button class="lnk m" data-act="mat-laden" data-arg="${i}" aria-label="${esc(m.name)} herunterladen" title="herunterladen">↓</button>`:"<span></span>"}
+        <button class="rm ${warn?"warnb":""}" data-act="mat-rm" data-arg="${i}" aria-label="${esc(m.name)} ${warn?"wirklich aus dem Repo löschen":"entfernen"}" style="${warn?"opacity:1;font-size:12px":""}">${warn?"im Repo löschen?":"×"}</button></div>`}
+    return `<div class="mat"><span class="thumb">${typ}</span><input class="ed" data-bind="p:material.${i}.name" value="${esc(m.name)}" placeholder="Dateiname" aria-label="Material ${i+1}"><input class="ed k" data-bind="p:material.${i}.info" value="${esc(m.info)}" placeholder="Info" aria-label="Info zu Material ${i+1}"><span></span>${rmB("material|"+i,"Material "+(i+1))}</div>`;
+  }).join("");
+  const fuss=c?`<span style="display:flex;gap:14px;padding-top:8px"><button class="mehr" data-act="mat-hoch">+ Datei hochladen</button><button class="mehr" data-act="add-entry" data-arg="material">+ nur Name</button><button class="mehr" data-act="mat-neu">neu einlesen</button></span>
+      <p class="hinweis">${l&&!l.ok?`<span class="fehler">Medien-Repo: ${esc(l.fehler)}</span>`:MEDIA_BUSY.has(p.id)?"Medien-Repo wird gelesen …":`Ablage: ${esc(c.repo)}/${esc(projektOrdner(p))}`}</p>`
+    :`<button class="mehr" style="padding-top:8px" data-act="add-entry" data-arg="material">+ Datei</button><p class="hinweis">Ohne Sync nur Dateinamen; mit Sync liegen die Dateien im Medien-Repo.</p>`;
+  return zeilen+fuss;
+}
+/* Rollierendes Fenster (wie v1 W-011): Dateien alter Projekte aus dem Repo entfernen – nur nach Vorschau */
+async function medienAltPlan(monate){
+  const grenze=addDays(today(),-Math.round(monate*30.44)),c=mediaCfg(),out=[];
+  for(const p of live("projekte")){const e=ende(p);if(!e||e>=grenze)continue;
+    for(const d of ordnerVon(p))for(const f of await ghListe(c,d))out.push({p,f})}
+  return out;
+}
+function medienTeil(){
+  if(!syncCfg)return"";const c=mediaCfg(),a=ui.medAlt;
+  return `<div><p class="sek" style="padding-bottom:8px">Medien</p>
+    <div class="sfg"><label class="k" for="med-repo">Medien-Repo</label><input class="ed" id="med-repo" value="${esc(c.repo)}" autocomplete="off"></div>
+    <p class="k" style="margin:10px 0 6px">Aufräumen: Dateien von Projekten, deren letzter Termin mehr als <input class="ed" id="med-monate" type="number" min="1" value="${ui.medMonate}" style="width:54px;display:inline-block;margin:0"> Monate zurückliegt, aus dem Repo entfernen. Die Einträge bleiben als Dateinamen im Projekt.</p>
+    ${a&&a.laedt?'<p class="k" style="margin:0">prüfe …</p>':a&&a.liste?(a.liste.length?`<details class="mdet" open><summary>${a.liste.length} Dateien · ${fmtGroesse(a.liste.reduce((s,x)=>s+x.f.size,0))}</summary><ul>${a.liste.map(x=>`<li>${esc(x.p.titel||"ohne Titel")} <span class="k">– ${esc(x.f.name)} · ${fmtGroesse(x.f.size)}</span></li>`).join("")}</ul></details>
+      <span class="links" style="margin-top:6px"><button class="lnk stark" data-act="med-alt-ok">${a.liste.length} Dateien löschen</button><button class="lnk m" data-act="med-alt-weg">abbrechen</button></span>`:'<p class="k" style="margin:0">Nichts zu entfernen.</p>'):a&&a.fehler?`<p class="k fehler" style="margin:0">${esc(a.fehler)}</p>`:""}
+    ${a&&(a.laedt||a.liste)?"":`<span class="links"><button class="lnk" data-act="med-alt">prüfen</button></span>`}</div>`;
+}
+
 /* ================= Notizen (P-016): Ort wird automatisch erfasst, man schreibt nur das Was ================= */
 const NZ_ARTEN=["Fehler","Verbesserung","Idee"];
 function teilVon(el){
@@ -1597,6 +1730,19 @@ const ACT={
     if(a==="dauer")for(const p of dauer){for(const f of p.felder)if(f.k==="Dauer")f.v=f.v.replace(/(^|\D)1 Stunden/g,"$11 Stunde");touch(p)}
     if(a==="du")for(const v of du){v.text=v.text.replace(/\{Absender\}/g,"{Absender-Vorname}");touch(v)}
     render();renderEinst();toast("korrigiert")},
+  "mat-oeffnen"(i){const p=get("projekte",ui.projekt),m=p&&p.material[+i];if(m&&m.pfad)medienLaden(m.pfad,m.name,true)},
+  "mat-laden"(i){const p=get("projekte",ui.projekt),m=p&&p.material[+i];if(m&&m.pfad)medienLaden(m.pfad,m.name,false)},
+  "mat-hoch"(){$("#matfile").click()},
+  "mat-neu"(){const p=get("projekte",ui.projekt);MEDIA_LIST.delete(p.id);medienAbgleich(p,true);render()},
+  "mat-rm"(i){const p=get("projekte",ui.projekt),m=p&&p.material[+i];if(!m)return;
+    if(m.pfad&&mediaCfg()&&imRepo(p,m)&&ui.sicher!=="mat|"+i){ui.sicher="mat|"+i;render();return}
+    ui.sicher=null;medienEntfernen(p,+i)},
+  async "med-alt"(){ui.medMonate=Math.max(1,+($("#med-monate").value)||12);ui.medAlt={laedt:true};renderEinst();
+    try{ui.medAlt={liste:await medienAltPlan(ui.medMonate)}}catch(e){ui.medAlt={fehler:syncFehlerText(e)}}renderEinst()},
+  "med-alt-weg"(){ui.medAlt=null;renderEinst()},
+  async "med-alt-ok"(){const l=(ui.medAlt||{}).liste||[];ui.medAlt={laedt:true};renderEinst();let n=0;
+    for(const x of l){try{await ghDelete(mediaCfg(),x.f.path,x.f.sha);n++;const m=(x.p.material||[]).find(m=>m.pfad===x.f.path);if(m){delete m.pfad;m.info=(m.info?m.info+" · ":"")+"aus dem Repo entfernt";touch(x.p)}MEDIA_URL.delete(x.f.path);MEDIA_LIST.delete(x.p.id)}catch(e){}}
+    ui.medAlt=null;renderEinst();render();toast(`${n} Dateien aus dem Repo entfernt`)},
   "aufr-ok"(){const n=aufrAusfuehren();ui.kmAuf=null;render();renderEinst();toast(`${n} ${n===1?"Kanal":"Kanäle"} aufgeräumt`)},
   "sync-dot"(){if(syncCfg)syncNow();else ACT.einst()},
   "sync-verbinden"(){syncVerbinden()},
@@ -1632,7 +1778,7 @@ document.addEventListener("click",e=>{
   if(ui.addMass){const o=e.target.closest(".am-o");if(o){addMassnahme(o.dataset.akey);return}
     if(!e.target.closest(".amenu")){ui.addMass=false;if(!e.target.closest("[data-act]")){render();return}}}
   const b=e.target.closest("[data-act]");
-  if(b){if(ui.sicher&&b.dataset.act!=="del"&&b.dataset.act!=="vwahl")ui.sicher=null;const f=ACT[b.dataset.act];
+  if(b){if(ui.sicher&&b.dataset.act!=="del"&&b.dataset.act!=="vwahl"&&b.dataset.act!=="mat-rm")ui.sicher=null;const f=ACT[b.dataset.act];
     if(f){const nav=NAV_ACTS.has(b.dataset.act);if(nav)navSave();f(b.dataset.arg,b,e);if(nav)navPush()}return}
   if(ui.sicher){ui.sicher=null;render()}
   const tr=e.target.closest("tr.z");if(tr&&!e.target.closest("input,textarea,select,a,label")){ACT.auf(tr.dataset.row);return}
@@ -1647,6 +1793,8 @@ document.addEventListener("input",e=>{
   const t=e.target;
   if(t.id==="q"){ui.q=t.value;renderSide();return}
   if(t.id==="nz-text"){ui.notiz.text=t.value;return}
+  if(t.id==="med-repo"){if(syncCfg){syncCfg.mediaRepo=t.value.trim()||"kommunikation-media";syncCfgSpeichern();MEDIA_LIST.clear();MEDIA_URL.clear()}return}
+  if(t.id==="med-monate"){ui.medMonate=Math.max(1,+t.value||12);return}
   if(t.classList.contains("sfi")){ui.sf[t.id.slice(3)]=t.value;if(ui.sfMeldung){ui.sfMeldung="";const st=$("#sync-st");if(st)st.textContent=syncZeile()}return}
   if(t.id==="addq"){ui.addQ=t.value;ui.addSel=0;addListeNeu();return}
   if(!t.dataset.bind||t.tagName==="SELECT")return;
@@ -1690,6 +1838,7 @@ $("#importfile").addEventListener("change",async e=>{
   catch(x){toast("Datei nicht lesbar (erwartet schemaVersion 2; v1-Daten über «Daten aus v1 übernehmen»)")}
   e.target.value="";
 });
+$("#matfile").addEventListener("change",e=>{const fs=[...e.target.files];e.target.value="";const p=get("projekte",ui.projekt);if(p&&fs.length)medienHochladen(p,fs)});
 $("#v1file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)migLesen("Datei "+f.name,async()=>JSON.parse(await f.text()))});
 document.addEventListener("keydown",e=>{
   const tag=document.activeElement.tagName;
